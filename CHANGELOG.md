@@ -34,3 +34,4 @@
 ## 1.0.0-beta.1 [2019-07-11]
 
 - Initial 1.0.0 beta release
+
