@@ -2,7 +2,7 @@
 
 # Release History
 
-## 1.0.0-beta.2 [tbd]
+## 1.0.0-beta.2 [2017-07-12]
 
 #### general
 
