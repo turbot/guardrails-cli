@@ -2,6 +2,10 @@
 
 # Release History
 
+## 1.0.0-beta.2 [tbd]
+
+- Workaround: avoid re-entrant calls to CLI. When calling `npm pack` from `turbot pack`, pass `--ignore-scripts` to avoid calling `prepare` (which calls into CLI). Instead explicitly call `prepack`, which webpacks the functions.
+
 ## 1.0.0-beta.2 [2017-07-12]
 
 #### general
