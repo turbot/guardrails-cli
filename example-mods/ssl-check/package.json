@@ -1,0 +1,18 @@
+{
+  "main": "turbot.dist.json",
+  "scripts": {
+    "prepack": "./build.sh"
+  },
+  "name": "@turbot/ssl-check",
+  "version": "5.0.0-alpha.1",
+  "devDependencies": {
+    "only-if-changed-webpack-plugin": "git://github.com/vhadianto/only-if-changed-webpack-plugin.git",
+    "webpack": "^4.17.1",
+    "webpack-command": "^0.4.1"
+  },
+  "title": "SSL Check",
+  "author": "Turbot HQ, Inc",
+  "peerDependencies": {
+    "@turbot/turbot": ">=5.0.0-alpha.1"
+  }
+}

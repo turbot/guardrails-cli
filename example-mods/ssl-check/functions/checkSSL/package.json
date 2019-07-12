@@ -1,0 +1,12 @@
+{
+  "name": "sslCheck",
+  "version": "1.0.0",
+  "description": "Check SSL certificate is authorized",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx mocha"
+  },
+  "dependencies": {
+    "@turbot/fn": "git+ssh://git@github.com:turbotio/fn"
+  }
+}

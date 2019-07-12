@@ -22,3 +22,4 @@ codebuild_artifacts
 turbot_mod
 turbot.dist.json
 turbot.head.json
+turbot.json

@@ -1,0 +1,13 @@
+{
+  "name": "sslCheckExpiration",
+  "version": "1.0.0",
+  "description": "Check SSL certificate expiration",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx mocha"
+  },
+  "dependencies": {
+    "@turbot/fn": "git+ssh://git@github.com:turbotio/fn",
+    "moment": "^2.24.0"
+  }
+}

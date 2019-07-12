@@ -1,0 +1,163 @@
+---
+
+$id: "tmod:@turbot/ssl-check"
+
+title: "SSL Check"
+
+name: "@turbot/ssl-check"
+
+author: Turbot HQ, Inc
+
+version: 5.0.0-alpha.1
+
+peerDependencies:
+  "@turbot/turbot": ">=5.0.0-alpha.1"
+
+policy:
+  types:
+    sslCheck:
+      title: SSL Check
+      icon: fab-expeditedssl
+      description: Check whether the site has ssl.
+      parent: "turbot#/resource/types/turbot"
+      targets: "turbot#/resource/types/folder"
+      category: "turbot#/control/categories/other"
+      schema:
+        type: string
+        enum:
+          - Skip
+          - "Check: SSL Enabled"
+        example:
+          - Skip
+        default: "Skip"
+
+    sslInput:
+      title: SSL Input
+      icon: fas-keyboard
+      description: Input the website URL. e.g africhthy.org, antkey.org, turbot.com etc
+      parent: "#/policy/types/sslCheck"
+      targets: "turbot#/resource/types/folder"
+      category: "turbot#/control/categories/other"
+      schema:
+        type: string
+        example: rudra.dev
+        default: "google.com"
+
+    sslCheckExpiration:
+      title: SSL Check Expiration
+      icon: fas-stopwatch 
+      description: Check whether the website's certificate has been expired.
+      parent: "turbot#/resource/types/turbot"
+      targets: "turbot#/resource/types/folder"
+      category: "turbot#/control/categories/other"
+      schema:
+        type: string
+        enum:
+          - Skip
+          - "Check: SSL Active"
+        example:
+          - Skip
+        default: "Skip"
+
+    sslExpirationWarningPeriod:
+      title: SSL Expiration Warning Period
+      icon: fas-stopwatch
+      description: The warning period in days for SSL expiration
+      parent: "turbot#/resource/types/turbot"
+      targets: "turbot#/resource/types/folder"
+      category: "turbot#/control/categories/other"
+      schema:
+        type: integer
+        default: 0
+
+control:
+  types:
+    sslCheck:
+      title: SSL Check
+      icon: fab-expeditedssl
+      description: The control that checks the ssl
+      parent: "turbot#/resource/types/turbot"
+      targets: "turbot#/resource/types/folder"
+      category: "turbot#/control/categories/other"
+      help: "#/help/cmdb"
+      input: |
+        {
+          inputSite: policy(uri: "#/policy/types/sslInput")
+          inputValue: policy(uri: "#/policy/types/sslCheck")
+        }
+      inline: |
+        turbot.log.info("input", $);
+        if ($.inputValue === "Skip") {
+          return turbot.skipped("Check set to skip");
+        }
+      function:
+        src: "functions/checkSSL"
+        bundle: "functions/checkSSL/dist/index.zip"
+        memory: 512
+      tests:
+        - description: Skip if cmdb policy set to skip
+          input:
+            inputValue: "Check: SSL Enabled"
+            inputSite: "www.google.com"
+          expect:
+            control:
+              state: ok
+
+    sslCheckExpiration:
+      title: SSL Check Expiration
+      icon: fas-stopwatch 
+      description: Check whether the website's certificate has been expired.
+      parent: "turbot#/resource/types/turbot"
+      targets: "turbot#/resource/types/folder"
+      category: "turbot#/control/categories/other"
+      input: |
+        {
+          inputSite: policy(uri: "#/policy/types/sslInput")
+          checkExpiration: policy(uri: "#/policy/types/sslCheckExpiration")
+          warningPeriod: policy(uri: "#/policy/types/sslExpirationWarningPeriod")
+        }
+      inline: |
+        if ($.checkExpiration === "Skip") {
+          return turbot.skipped("sslCheckExpiration set to skip");
+        }
+      function:
+        src: "functions/checkSSLExpiration"
+        bundle: "functions/checkSSLExpiration/dist/index.zip"
+        memory: 512
+      tests:
+        - description: Skip if cmdb policy set to skip
+          input:
+            checkExpiration: Skip
+            inputSite: "www.google.com"
+            warningPeriod: 0
+          expect:
+            control:
+              state: skipped
+
+        - description: OK with zero warning period
+          input:
+            checkExpiration: "Check: SSL Active"
+            inputSite: "www.google.com"
+            warningPeriod: 0
+          expect:
+            control:
+              state: ok
+
+        - description: Alarm with large warning period
+          input:
+            checkExpiration: "Check: SSL Active"
+            inputSite: "www.google.com"
+            warningPeriod: 1000
+          expect:
+            control:
+              state: alarm
+
+        - description: Error with invalid url
+          input:
+            checkExpiration: "Check: SSL Active"
+            inputSite: "www.invalid-web-site.com/"
+            warningPeriod: 1000
+          expect:
+            control:
+              state: error
+
