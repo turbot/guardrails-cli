@@ -2,35 +2,40 @@
 
 # Release History
 
+## 1.0.0-beta.3 [2017-07-12]
+
+- Workaround: avoid re-entrant calls to CLI. When calling `npm pack` from `turbot pack`, pass `--ignore-scripts` to avoid calling `prepare` (which calls into CLI). Instead explicitly call `prepack`, which webpacks the functions.
+
 ## 1.0.0-beta.2 [2017-07-12]
 
-#### general
+#### General
 
-- update CLI to use use node 10
+- Update CLI to use use node 10.
 
 #### turbot publish
 
-- support `prepublish` script defined in mod
-- when publishing, first call `createVersion` mutation and then `getVersion` query
-- ensure index.zip is deleted after publish
-- improve CLI output when trying to republish an existing mod version
+- Support `prepublish` script defined in mod.
+- When publishing, first call `createVersion` mutation and then `getVersion` query.
+- Ensure index.zip is deleted after publish.
+- Improve CLI output when trying to republish an existing mod version.
 
 #### turbot up
 
-- if no package json is present, deduce mod details from tarball filename, close #1818
+- If no package json is present, deduce mod details from tarball filename.
 
 #### turbot pack
 
-- add build number to filename
+- Add build number to filename.
 
 #### turbot login
 
-- fix bug requiring 2 logins before acquiring token
+- Fix bug requiring 2 logins before acquiring token.
 
 #### turbot install
 
-- fix bug where incorrect header path used when writing headers
+- Fix bug where incorrect header path used when writing headers.
 
 ## 1.0.0-beta.1 [2019-07-11]
 
-- Initial 1.0.0 beta release
+- Initial 1.0.0 beta release.
+
