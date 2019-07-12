@@ -1,6 +1,16 @@
 # Turbot CLI
 
-The Turbot CLI provides development tool for Turbot mods.
+The Turbot CLI provides development tool for Turbot mods. mIt provides the following commands: 
+
+- inspect
+- test
+- init
+- pack
+- up
+- login
+- publish
+- install
+
 
 ### turbot inspect
 
@@ -11,9 +21,9 @@ Display summary information about the mod.
 
 Run tests for the mod.
 
-##### Inline control test syntax
+#### Inline control test syntax
 
-###### Control state
+##### Control state
 
 ```
 expect:
@@ -28,21 +38,21 @@ expect:
   control: skipped|error|alarm|tbd
 ```
 
-###### Process state
+##### Process state
 
 ```
 expect:
   processState: update|terminate
 ```
 
-###### Resource commands
+##### Resource commands
 
 A partial match is performed on each resource command expectation.
 (all properties specified in expectation are checked, but any properties which exist in in actual command bu not expectation are ignored)
 
 There are several ways resources can be matched.
 
-*Ordered*
+###### Ordered
 
 The expectation items must all match the actual resource commands, in the same order.
 
@@ -68,7 +78,7 @@ or
         - etc.
 ```
 
-*Unordered*
+###### Unordered
 
 The expecation items must all match the actual resource commands, ignoring order.
 
@@ -82,7 +92,7 @@ The expecation items must all match the actual resource commands, ignoring order
         - etc.
 ```
 
-*Include*
+###### Include
 
 The actual resource commands must _include_ the expecation items, ignoring order.
 
@@ -200,7 +210,7 @@ Upload and install the mod
 
 Create a new mod, add resources to an existing mode or add controls to existing mod resources.
 
-####init templates
+#### init templates
 
 When running `turbot init`, controls, actions, policies and reports (aka _runnables_) are added to the mod by rendering nunjucks templates.
 
@@ -237,7 +247,7 @@ templates
         types
           <policy-name>.yml
 ```
-####render context
+#### render context
 
 The templates for the selected runnables are rendered using a render context which is formed as follows:
 
@@ -258,7 +268,7 @@ The templates for the selected runnables are rendered using a render context whi
 
 4 ) The runnable yaml for the target runnable is loaded (if it exists) and any render context specified in the yaml front-matter is merged in
 
-####config file
+#### config file
 Command parameters may be passed to `turbot init` via a config file specified using the command arg `--config`
 
 The config file should be yaml with the command arguments in the yaml front-matter, as follows:
@@ -285,7 +295,7 @@ renderContext:
 ---
 ```
 
-####saving the config
+#### saving the config
 The config variables used to create a runnable are saved in the yaml front-matter of any runnables which are created.
 
 This means to renegerate the runnable, all that is needed it to run **turbot init --config <path-to-tunnable-yaml>**
