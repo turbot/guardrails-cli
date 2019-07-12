@@ -2,6 +2,10 @@
 
 # Release History
 
+## 1.0.0-beta.4 [2017-07-12]
+
+- Revert to node 8 for Windows compatibility
+
 ## 1.0.0-beta.3 [2017-07-12]
 
 - Workaround: avoid re-entrant calls to CLI. When calling `npm pack` from `turbot pack`, pass `--ignore-scripts` to avoid calling `prepare` (which calls into CLI). Instead explicitly call `prepack`, which webpacks the functions.
