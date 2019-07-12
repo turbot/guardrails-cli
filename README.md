@@ -12,18 +12,18 @@ The Turbot CLI provides development tool for Turbot mods. mIt provides the follo
 - install
 
 
-### turbot inspect
+## turbot inspect
 
 Display summary information about the mod.
 
 
-### turbot test
+## turbot test
 
 Run tests for the mod.
 
-#### Inline control test syntax
+### Inline control test syntax
 
-##### Control state
+#### Control state
 
 ```
 expect:
@@ -38,21 +38,21 @@ expect:
   control: skipped|error|alarm|tbd
 ```
 
-##### Process state
+#### Process state
 
 ```
 expect:
   processState: update|terminate
 ```
 
-##### Resource commands
+#### Resource commands
 
 A partial match is performed on each resource command expectation.
 (all properties specified in expectation are checked, but any properties which exist in in actual command bu not expectation are ignored)
 
 There are several ways resources can be matched.
 
-###### Ordered
+##### Ordered
 
 The expectation items must all match the actual resource commands, in the same order.
 
@@ -78,7 +78,7 @@ or
         - etc.
 ```
 
-###### Unordered
+##### Unordered
 
 The expecation items must all match the actual resource commands, ignoring order.
 
@@ -92,7 +92,7 @@ The expecation items must all match the actual resource commands, ignoring order
         - etc.
 ```
 
-###### Include
+##### Include
 
 The actual resource commands must _include_ the expecation items, ignoring order.
 
@@ -106,13 +106,13 @@ The actual resource commands must _include_ the expecation items, ignoring order
         - etc.
 ```
 
-###### Actions
+#### Actions
 
 The only difference (for test purposes) between an **action** and a **control** is that the action may take an argument - this appears as `args` in the inline input.
 
 Action tests are exactly the same as control tests, with the difference that the test _input_ may include an _args_ field
 
-###### Policies
+#### Policies
 
 For examples of policy tests, see packages/cli/test/mods/aws-kms/src/key/policy/types
 
@@ -191,26 +191,26 @@ description: use template settingValue from inline
     policy: A(inline)
 ```
 
-###### Reports
+#### Reports
 
 The only difference between a **report** and a **policy** is that the report may take an argument - this appears as `args` in the inline input.
 
 Report tests are exactly the same as policy tests, with the difference that the test _input_ would include an _args_ field
 
 
-### turbot pack
+## turbot pack
 
 Package the mod, creating a deployable file for use with Turbot APIs.
 
-### turbot up
+## turbot up
 
 Upload and install the mod
 
-### turbot init
+## turbot init
 
 Create a new mod, add resources to an existing mode or add controls to existing mod resources.
 
-#### init templates
+### init templates
 
 When running `turbot init`, controls, actions, policies and reports (aka _runnables_) are added to the mod by rendering nunjucks templates.
 
@@ -247,7 +247,7 @@ templates
         types
           <policy-name>.yml
 ```
-#### render context
+### render context
 
 The templates for the selected runnables are rendered using a render context which is formed as follows:
 
@@ -268,7 +268,7 @@ The templates for the selected runnables are rendered using a render context whi
 
 4 ) The runnable yaml for the target runnable is loaded (if it exists) and any render context specified in the yaml front-matter is merged in
 
-#### config file
+### config file
 Command parameters may be passed to `turbot init` via a config file specified using the command arg `--config`
 
 The config file should be yaml with the command arguments in the yaml front-matter, as follows:
@@ -295,10 +295,39 @@ renderContext:
 ---
 ```
 
-#### saving the config
+### saving the config
 The config variables used to create a runnable are saved in the yaml front-matter of any runnables which are created.
 
-This means to renegerate the runnable, all that is needed it to run **turbot init --config <path-to-tunnable-yaml>**
+This means to regenerate the runnable, all that is needed it to run **turbot init --config <path-to-tunnable-yaml>**
+
+
+## Turbot Configuration file
+
+The CLI will look for a configuration file at the path **~/.turbot/config.yml**
+
+The following values are expected:
+
+```
+init:
+    templatePath
+testDefaults:
+    aws:
+      region: ...
+      account: ...
+    gcp:
+      region: ...
+      account: ...
+    azure:
+      region: ...
+      account: ...
+```
+
+#### templatePath
+This is the location used by `turbot init` to search for templates
+
+#### testDefaults
+These values aere used by  used by `turbot init` to populate the provider `account` and `region` properties in the template render context.
+(These values are typically required to render `region` and `account` properties within control tests.)
 
 # Mod composition
 
@@ -328,31 +357,3 @@ control:
 
 The `+object` fields will be replaced by an object constructed from the file or files matching the property value, which is a [glob](<https://en.wikipedia.org/wiki/Glob_(programming)>). (Full syntax details are given below.)
 
-
-### Configuration file
-
-The CLI will look for a configuration file at the path **~/.turbot/config.yml**
-
-The following values are expected:
-
-```
-init:
-    templatePath
-testDefaults:
-    aws:
-      region: ...
-      account: ...
-    gcp:
-      region: ...
-      account: ...
-    azure:
-      region: ...
-      account: ...
-```
-
-##### templatePath
-This is the location used by `turbot init` to search for templates
-
-##### testDefaults
-These values aere used by  used by `turbot init` to populate the provider `account` and `region` properties in the template render context.
-(These values are typically required to render `region` and `account` properties within control tests.)
