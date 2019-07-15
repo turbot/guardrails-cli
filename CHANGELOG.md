@@ -2,6 +2,15 @@
 
 # Release History
 
+## 1.0.0-beta.5 [tbd]
+
+#### turbot up
+- support both old and new style mods
+
+#### turbot pack
+- no longer add build number to packed mod
+
+
 ## 1.0.0-beta.4 [2017-07-12]
 
 - Revert to node 8 for Windows compatibility
