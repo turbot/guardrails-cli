@@ -2,7 +2,7 @@
 
 # Release History
 
-## 1.0.0-beta.5 [tbd]
+## 1.0.0-beta.5 [2017-07-16]
 
 #### turbot up
 - support both old and new style mods
