@@ -2,13 +2,28 @@
 
 # Release History
 
+## 1.0.0-beta.6 [2017-07-18]
+
+#### General
+
+- Add `include-build-number` flag to pack/up/publish to optionally append build number to packed mod.
+
+#### turbot publish
+
+- Use mod $id instead of name to extract mod identityName and name.
+
+#### turbot install 
+
+- Use updated graphql schema to retrieve download url. 
+- Improve error handling and output message when headers cannot be downloaded. 
+ 
 ## 1.0.0-beta.5 [2017-07-16]
 
 #### turbot up
-- support both old and new style mods
+- Support both old and new style mods.
 
 #### turbot pack
-- no longer add build number to packed mod
+- No longer add build number to packed mod.
 
 
 ## 1.0.0-beta.4 [2017-07-12]
