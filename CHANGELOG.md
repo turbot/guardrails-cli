@@ -2,6 +2,16 @@
 
 # Release History
 
+## 1.0.0-beta.7 [2017-07-24]
+
+#### turbot up
+
+ - Fixed legacy mod upload.
+ 
+#### turbot publish
+
+ - Fixed bug where publish status was not being returned.
+ 
 ## 1.0.0-beta.6 [2017-07-18]
 
 #### General
