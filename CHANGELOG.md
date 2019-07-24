@@ -2,7 +2,7 @@
 
 # Release History
 
-## 1.0.0-beta.7 [2017-07-18]
+## 1.0.0-beta.7 [2017-07-24]
 
 #### turbot up
 
