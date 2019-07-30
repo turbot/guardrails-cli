@@ -2,6 +2,22 @@
 
 # Release History
 
+## 1.0.0-beta.8 [2017-07-30]
+
+#### General
+
+- All commands now honour arguments set in ~/.turbot/config.yml.
+- Only call process.exit in case of error.
+
+#### turbot login, install, publish
+
+- Add `--registry` flag to select the registry to use.
+
+#### turbot init
+
+- Update init to work with new format mods.
+
+
 ## 1.0.0-beta.7 [2017-07-24]
 
 #### turbot up
