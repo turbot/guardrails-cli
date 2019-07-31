@@ -2,6 +2,20 @@
 
 # Release History
 
+## 1.0.0-beta.9 [2017-07-31]
+
+#### General
+
+- Command line args to have higher priority than config file values.
+- Do not throw error if config file not present.
+- When logging into registry, save refresh token and use to automatically refresh expired tokens.
+- Update compile.sh to zip the build results into files with the naming convention: turbot_cli_${version}_${platform}.zip
+ 
+#### turbot publish
+
+- Do not remove the index.zip file unless publish is successful.
+- Add `--zip-file` argument to publish to bypass the mod packing and use the zip file specified.
+
 ## 1.0.0-beta.8 [2017-07-30]
 
 #### General
@@ -16,7 +30,6 @@
 #### turbot init
 
 - Update init to work with new format mods.
-
 
 ## 1.0.0-beta.7 [2017-07-24]
 
