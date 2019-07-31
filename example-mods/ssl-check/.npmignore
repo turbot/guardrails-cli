@@ -1,3 +1,0 @@
-# Because we want to run npm pack in this directory it needs to have its own .npmignore (or .gitignore but .npmignore is clearer why we're doing it)
-node_modules
-*.tgz

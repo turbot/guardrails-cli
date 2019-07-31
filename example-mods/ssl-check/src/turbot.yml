@@ -13,6 +13,9 @@ version: 5.0.0-alpha.1
 peerDependencies:
   "@turbot/turbot": ">=5.0.0-alpha.1"
 
+scripts:
+  prepack: ./build.sh
+
 policy:
   types:
     sslCheck:
