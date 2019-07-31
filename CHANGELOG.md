@@ -2,6 +2,17 @@
 
 # Release History
 
+## 1.0.0-beta.9 [2017-07-31]
+
+#### General
+
+- Command line args to have higher priority than config file values.
+- Do not throw error if config file not present.
+
+#### turbot publish
+
+-  do not remove the index.zip file unless publish is successful.
+
 ## 1.0.0-beta.8 [2017-07-30]
 
 #### General
@@ -16,7 +27,6 @@
 #### turbot init
 
 - Update init to work with new format mods.
-
 
 ## 1.0.0-beta.7 [2017-07-24]
 
