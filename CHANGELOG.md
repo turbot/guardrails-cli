@@ -9,7 +9,7 @@
 - Command line args to have higher priority than config file values.
 - Do not throw error if config file not present.
 - When logging into registry, save refresh token and use to automatically refresh expired tokens.
-- Update compile.sh to zip the build results into files with the naming convention: turbot_cli_${version}_${platform}.zip
+- Update compile.sh to zip the build results into files with the naming convention: turbot_cli_${version}_${platform}_${arch}.zip
  
 #### turbot publish
 
@@ -67,7 +67,7 @@
 
 ## 1.0.0-beta.4 [2017-07-12]
 
-- Revert to node 8 for Windows compatibility
+- Revert to node 8 for Windows compatibility.
 
 ## 1.0.0-beta.3 [2017-07-12]
 

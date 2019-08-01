@@ -14,6 +14,8 @@ peerDependencies:
   "@turbot/turbot": ">=5.0.0-alpha.1"
 
 scripts:
+# uncomment for windows
+#  prepack: build.bat
   prepack: ./build.sh
 
 policy:

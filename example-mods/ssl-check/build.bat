@@ -5,14 +5,12 @@ SET SCRIPT_PATH=%cd%
 SET BUILD_PATH="%SCRIPT_PATH%\config\build.bat"
 
 @echo off
-pushd functions
+cd functions
 for /f "delims=" %%D in ('dir /a:d /b') do (
   cd %%D
   xcopy %BUILD_PATH% /Y
-  build.bat
+  call build.bat
   del build.bat
   cd ..
 )
-popd
-cd
-
+cd ..
