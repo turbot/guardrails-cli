@@ -7,6 +7,6 @@
     "test": "npx mocha"
   },
   "dependencies": {
-    "@turbot/fn": "git+ssh://git@github.com:turbotio/fn"
+    "@turbot/fn": "5.0.0-beta.1"
   }
 }

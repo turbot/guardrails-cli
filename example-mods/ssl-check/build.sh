@@ -2,9 +2,6 @@
 
 SCRIPT_PATH="$( cd "$(dirname "$0")" ; pwd -P )"
 BUILD_PATH="$SCRIPT_PATH/config/build.sh"
-CONFIG_PATH="$SCRIPT_PATH/config/webpack.config.js"
-WEBPACK_PATH="$SCRIPT_PATH/node_modules/webpack/bin/webpack.js"
-
 
 #if there are no functions, exit now to avoid errors
 if [ ! -d "functions" ]; then
@@ -17,7 +14,7 @@ targets=$(find functions -maxdepth 1 -mindepth 1 -type d)
 for c in ${targets[@]}; do
   pushd $c
   cp $BUILD_PATH build.sh
-  ./build.sh $WEBPACK_PATH $CONFIG_PATH
+  ./build.sh
   rm build.sh
   popd
 done

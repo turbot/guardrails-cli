@@ -2,21 +2,28 @@
 
 # Release History
 
-## 1.0.0-beta.9 [2017-07-31]
+## 1.0.0-beta.10 [2019-08-01]
+
+#### General
+ 
+- Update the mod loading code to be platform-independent.
+- Support mods with no source, just header and dist file.
+
+## 1.0.0-beta.9 [2019-07-31]
 
 #### General
 
 - Command line args to have higher priority than config file values.
 - Do not throw error if config file not present.
 - When logging into registry, save refresh token and use to automatically refresh expired tokens.
-- Update compile.sh to zip the build results into files with the naming convention: turbot_cli_${version}_${platform}.zip
+- Update compile.sh to zip the build results into files with the naming convention: turbot_cli_${version}_${platform}_${arch}.zip
  
 #### turbot publish
 
 - Do not remove the index.zip file unless publish is successful.
 - Add `--zip-file` argument to publish to bypass the mod packing and use the zip file specified.
 
-## 1.0.0-beta.8 [2017-07-30]
+## 1.0.0-beta.8 [2019-07-30]
 
 #### General
 
@@ -31,7 +38,7 @@
 
 - Update init to work with new format mods.
 
-## 1.0.0-beta.7 [2017-07-24]
+## 1.0.0-beta.7 [2019-07-24]
 
 #### turbot up
 
@@ -41,7 +48,7 @@
 
  - Fixed bug where publish status was not being returned.
  
-## 1.0.0-beta.6 [2017-07-18]
+## 1.0.0-beta.6 [2019-07-18]
 
 #### General
 
@@ -56,7 +63,7 @@
 - Use updated graphql schema to retrieve download url. 
 - Improve error handling and output message when headers cannot be downloaded. 
  
-## 1.0.0-beta.5 [2017-07-16]
+## 1.0.0-beta.5 [2019-07-16]
 
 #### turbot up
 - Support both old and new style mods.
@@ -65,15 +72,15 @@
 - No longer add build number to packed mod.
 
 
-## 1.0.0-beta.4 [2017-07-12]
+## 1.0.0-beta.4 [2019-07-12]
 
-- Revert to node 8 for Windows compatibility
+- Revert to node 8 for Windows compatibility.
 
-## 1.0.0-beta.3 [2017-07-12]
+## 1.0.0-beta.3 [2019-07-12]
 
 - Workaround: avoid re-entrant calls to CLI. When calling `npm pack` from `turbot pack`, pass `--ignore-scripts` to avoid calling `prepare` (which calls into CLI). Instead explicitly call `prepack`, which webpacks the functions.
 
-## 1.0.0-beta.2 [2017-07-12]
+## 1.0.0-beta.2 [2019-07-12]
 
 #### General
 
