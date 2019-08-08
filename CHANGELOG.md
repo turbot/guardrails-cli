@@ -2,6 +2,31 @@
 
 # Release History
 
+
+## 1.0.0-beta.11 [2019-08-08]
+
+#### turbot test
+
+- Add testing support for `putPaths` resource command.
+
+#### turbot publish 
+
+- Include README.md and CHANGELOG.md files in published mod if present. 
+
+### turbot install 
+
+- Install README.md and CHANGELOG.md if they exist in registry.
+- Add --latest flag to force major version upgrade if there is one available.
+- Add logic to determine whether to install a dependency:
+    - If the dependency does not exist it is installed.
+    - If the dependency exists but does not satisfy the version requirements, it is updated.
+    - If the dependency exists but the new version has a higher minor version it is updated.
+    - If the dependency exists and the new version has a higher major version it *NOT* updated unless the `--latest` flag is set.
+
+#### turbot up
+
+- Replace 'mod-file' argument with 'zip-file' and fix implementation. 
+
 ## 1.0.0-beta.10 [2019-08-01]
 
 #### General
