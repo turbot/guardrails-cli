@@ -13,7 +13,7 @@
 
 - Include README.md and CHANGELOG.md files in published mod if present. 
 
-### turbot install 
+#### turbot install 
 
 - Install README.md and CHANGELOG.md if they exist in registry.
 - Add --latest flag to force major version upgrade if there is one available.
