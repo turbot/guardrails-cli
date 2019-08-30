@@ -3,6 +3,12 @@
 # Release History
 
 
+## 1.0.0-beta.12 [2019-08-30]
+
+#### turbot up
+
+- Fixed: incorrect casing of ControlCommandInput mutation command type used to trigger mod installed control.
+
 ## 1.0.0-beta.11 [2019-08-08]
 
 #### turbot test
@@ -21,7 +27,7 @@
     - If the dependency does not exist it is installed.
     - If the dependency exists but does not satisfy the version requirements, it is updated.
     - If the dependency exists but the new version has a higher minor version it is updated.
-    - If the dependency exists and the new version has a higher major version it *NOT* updated unless the `--latest` flag is set.
+    - If the dependency exists and the new version has a higher major version it is *NOT* updated unless the `--latest` flag is set.
 
 #### turbot up
 
