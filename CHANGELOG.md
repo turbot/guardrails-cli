@@ -3,6 +3,11 @@
 # Release History
 
 
+## 1.0.0-beta.13 [tbd]
+
+#### turbot install 
+
+- Improve error handling if dependency is not in registry. 
 ## 1.0.0-beta.12 [2019-08-30]
 
 #### turbot up
