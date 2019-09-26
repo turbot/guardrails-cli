@@ -2,6 +2,22 @@
 
 # Release History
 
+## 1.0.0-beta.13 [2019-09-26]
+
+#### General
+
+- Add `provider-test` test mod.
+
+#### Bug fixes
+- Action state was not being tested by 'turbot test'.
+
+#### turbot compose 
+
+- Remove runnable input from head file
+
+#### turbot install 
+
+- Improve error handling if dependency is not in registry. 
 
 ## 1.0.0-beta.12 [2019-08-30]
 
