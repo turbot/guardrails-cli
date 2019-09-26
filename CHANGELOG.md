@@ -8,9 +8,8 @@
 
 - Add `provider-test` test mod.
 
-#### Bugfixes
-- Action state was not 
-being tested by 'turbot test'.
+#### Bug fixes
+- Action state was not being tested by 'turbot test'.
 
 #### turbot compose 
 
