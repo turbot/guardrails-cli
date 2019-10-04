@@ -2,6 +2,14 @@
 
 # Release History
 
+## 1.0.0-beta.14 [2019-10-04]
+
+#### Bug fixes
+-  fix `getSecret` nested resource resolver
+
+#### turbot init
+ - Added nunjucks filters `camelCase` and `pascalCase` 
+ 
 ## 1.0.0-beta.13 [2019-09-26]
 
 #### General
@@ -9,7 +17,7 @@
 - Add `provider-test` test mod.
 
 #### Bug fixes
-- Action state was not being tested by 'turbot test'.
+- Action state was not being tested by `turbot test`.
 
 #### turbot compose 
 
@@ -19,7 +27,7 @@
 
 - Improve error handling if dependency is not in registry. 
 
-## 1.0.0-beta.12 [2019-08-30]
+## 1.0.0-beta.12 [2019-08-30]x  
 
 #### turbot up
 
