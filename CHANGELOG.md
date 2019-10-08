@@ -33,6 +33,9 @@
 #### turbot init 
  - rename `templatePath` to `templateRoot` and make an argument to `init` command, as opposed to only being set in config 
 
+#### turbot test
+- return the number of test failures 
+
 ## 1.0.0-beta.14 [2019-10-04]
 
 #### Bug fixes
