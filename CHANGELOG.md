@@ -2,6 +2,37 @@
 
 # Release History
 
+
+## 1.0.0-beta.15 [2019-10-08]
+
+#### General
+- update config file location and registry file format. New format is:
+```
+~
+  .config
+    turbot
+      config.yml
+      registry.yml
+      credentials.yml
+```
+- add one-off migration from old to new config format
+
+#### turbot configure
+- add `configure` command to create/update the credentials file
+
+#### turbot up
+- add support for credentials profile
+- add args: 
+  - profile
+  - access-key
+  - secret-key
+  - workspace
+  - credentials-file
+- rename `parent-resource` to `parent`
+
+#### turbot init 
+ - rename `templatePath` to `templateRoot` and make an argument to `init` command, as opposed to only being set in config 
+
 ## 1.0.0-beta.14 [2019-10-04]
 
 #### Bug fixes
