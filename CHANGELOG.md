@@ -2,6 +2,15 @@
 
 # Release History
 
+## 1.0.0-beta.16 [2019-10-09]
+
+#### Bugfixes
+- Fix bug in buildApiUrl - workspace now requires both `workspace name` and `installation domain` to be provided (e.g. `bananaman-turbot.putney.turbot.io`, rather than just `bananaman-turbot.putney`).
+
+#### turbot up
+- credentials environment variables changed:
+  - TURBOT_ACCESS_KEY_ID to TURBOT_ACCESS_KEY 
+  - TURBOT_SECRET_ACCESS_KEY to TURBOT_SECRET_KEY 
 
 ## 1.0.0-beta.15 [2019-10-08]
 
@@ -23,15 +32,18 @@
 #### turbot up
 - add support for credentials profile
 - add args: 
-  - profile
-  - access-key
-  - secret-key
-  - workspace
-  - credentials-file
+  - `profile`
+  - `access-key`
+  - `secret-key`
+  - `workspace`
+  - `credentials-file`
 - rename `parent-resource` to `parent`
 
 #### turbot init 
  - rename `templatePath` to `templateRoot` and make an argument to `init` command, as opposed to only being set in config 
+
+#### turbot test
+- return the number of test failures 
 
 ## 1.0.0-beta.14 [2019-10-04]
 
