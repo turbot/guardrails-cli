@@ -2,6 +2,29 @@
 
 # Release History
 
+## 1.0.0-beta.17 [2019-10-11]
+
+### General
+ - add ability to view markdown command documentation from command line.
+
+#### Bugfixes
+- runnable test data validation failing for array input. 
+
+### turbot inspect
+ - use a nunjucks template to format output. 
+ - add inspect template for changelog output.
+
+#### turbot test
+ - add support for aws organization.credentials in input queries.
+ - update delete testing to use aka if passed in expectation.
+
+#### turbot configure
+ - update prompts to use correct names: 'Turbot Access Key' and 'Turbot Secret Key'.
+
+
+#### turbot up 
+ - move defaulting of `parent` into the argument definition
+
 ## 1.0.0-beta.16 [2019-10-09]
 
 #### Bugfixes
