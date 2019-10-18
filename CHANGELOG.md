@@ -2,15 +2,20 @@
 
 # Release History
 
-## 1.0.0-beta.17 [2019-10-11]
+## 1.0.0-beta.18 [2019-10-18]
 
-### General
+#### Bugfixes
+- fix `up` and `init` to call `inspect` instead of `doInspect`.
+
+## 1.0.0-beta.17 [2019-10-16]
+
+#### General
  - add ability to view markdown command documentation from command line.
 
 #### Bugfixes
 - runnable test data validation failing for array input. 
 
-### turbot inspect
+#### turbot inspect
  - use a nunjucks template to format output. 
  - add inspect template for changelog output.
 
@@ -20,7 +25,6 @@
 
 #### turbot configure
  - update prompts to use correct names: 'Turbot Access Key' and 'Turbot Secret Key'.
-
 
 #### turbot up 
  - move defaulting of `parent` into the argument definition
