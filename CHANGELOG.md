@@ -2,6 +2,11 @@
 
 # Release History
 
+## 1.0.0-beta.19 [2019-10-21]
+
+#### Bugfixes
+- fix `test`. Call to graphql-tag accidentally removed getUrisFromRunnableInputQuery. 
+
 ## 1.0.0-beta.18 [2019-10-18]
 
 #### Bugfixes
