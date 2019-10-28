@@ -2,6 +2,14 @@
 
 # Release History
 
+## 1.0.0-beta.20 [2019-10-28]
+
+#### General
+- add 'graphql' command. This allows graphql queries to be run against turbot environments from the command line. 
+
+#### Bugfixes
+- remove error: `type "ResourceWithNavigation" is missing a "__resolveType" resolver.` 
+ 
 ## 1.0.0-beta.19 [2019-10-21]
 
 #### Bugfixes
