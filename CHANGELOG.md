@@ -2,6 +2,13 @@
 
 # Release History
 
+## 1.0.0-beta.21 [2019-11-01]
+
+####turbot graphql
+-  `--expected` to return result event if there is no match.
+#### turbot test
+- use node 10 lambci image for lambda testing.
+
 ## 1.0.0-beta.20 [2019-10-28]
 
 #### General
