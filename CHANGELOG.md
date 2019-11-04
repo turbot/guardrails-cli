@@ -2,10 +2,22 @@
 
 # Release History
 
+## 1.0.0-beta.22 [2019-11-06]
+
+#### General
+- add support for turbot-prd.com registry.
+
+#### turbot download
+- add `turbot download` command to download mod zip file from registry.
+ 
+#### turbot up
+- fix --zip-file to work when run from non-mod directory.
+
 ## 1.0.0-beta.21 [2019-11-01]
 
-####turbot graphql
+#### turbot graphql
 -  `--expected` to return result event if there is no match.
+
 #### turbot test
 - use node 10 lambci image for lambda testing.
 
