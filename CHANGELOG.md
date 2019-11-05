@@ -2,7 +2,12 @@
 
 # Release History
 
-## 1.0.0-beta.22 [2019-11-06]
+## 1.0.0-beta.23 [2019-11-06]
+
+#### Bugfix
+- fix invalid default `registry` 
+
+## 1.0.0-beta.22 [2019-11-05]
 
 #### General
 - add support for turbot-prd.com registry.
@@ -11,7 +16,7 @@
 - add `turbot download` command to download mod zip file from registry.
  
 #### turbot up
-- fix --zip-file to work when run from non-mod directory.
+- fix `--zip-file` to work when run from non-mod directory.
 
 ## 1.0.0-beta.21 [2019-11-01]
 
