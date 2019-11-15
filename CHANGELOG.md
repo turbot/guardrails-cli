@@ -2,6 +2,15 @@
 
 # Release History
 
+## 1.0.0-beta.25 [2019-11-15]
+
+#### General
+- add `template` command, with subcommands `build` and `outdated`. This will replace `init`.
+- package using node version 10 - this fixes windows support
+
+#### turbot inspect
+- `template` argument changed to `output-template`
+
 ## 1.0.0-beta.24 [2019-11-15]
 
 #### turbot up 
