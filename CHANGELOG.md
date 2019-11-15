@@ -2,6 +2,19 @@
 
 # Release History
 
+## 1.0.0-beta.24 [2019-11-15]
+
+#### turbot up 
+- use GraphQL resource queries/mutations rather than REST APIs
+
+#### turbot publish
+- improve error message when current version is already published.
+
+#### General
+- package using node version 10
+- remove unnecessary default value of boolean args
+- remove strict() flag to fix download command
+
 ## 1.0.0-beta.23 [2019-11-06]
 
 #### Bugfix
