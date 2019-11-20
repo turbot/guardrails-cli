@@ -2,11 +2,30 @@
 
 # Release History
 
+## 1.0.0-beta.26 [2019-11-20]
+
+#### turbot test
+- fix testing for putPaths resource command using new mutations.
+
+#### turbot template
+- add snakeCase filter to the template render environment. 
+- update `build` to work when run in in a non-mod directory.
+
+#### Bugfixes
+- fix graphql command - update getTextOrFile to NOT parse undefined values. 
+- fix `turbot --version` 
+- revert to node10 to avoid random `maximum call stack size exceeded` errors 
+
 ## 1.0.0-beta.25 [2019-11-15]
 
 #### General
 - add `template` command, with subcommands `build` and `outdated`. This will replace `init`.
-- package using node version 10 - this fixes windows support
+- Updated https library to `request` library for `publish` and `up` command.
+- package using node version 12 - this fixes windows support, which was broken on node 10
+
+
+#### turbot test
+- update to support new format sdk command mutations 
 
 #### turbot inspect
 - `template` argument changed to `output-template`
