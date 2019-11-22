@@ -2,6 +2,11 @@
 
 # Release History
 
+## 1.0.0-beta.27 [2019-11-22]
+
+#### Bugfixes
+- fix turbot test support for putPath commands using legacy sdk command format
+
 ## 1.0.0-beta.26 [2019-11-20]
 
 #### turbot test
