@@ -2,6 +2,26 @@
 
 # Release History
 
+## 1.0.0-beta.27 [2019-11-25]
+
+#### turbot template
+- remove concept of template dependencies.
+- Add `--global-config` arg to specify global template config location (defaults to `~/.config/turbot/template.yml`).
+- Update config precedences:
+ ```
+   1. base config {directory, ignore}
+   2. cli global config
+   3. templateRoot config
+   4. template config
+   5. target directory config
+   6. mod derived config
+   7. instance config
+   8. template instance config
+   9. command line config
+```
+
+#### turbot graphql
+ - update `graphql --expected` to return non zero error code if it times out waiting for the expected data. 
 ## 1.0.0-beta.27 [2019-11-22]
 
 #### Bugfixes
