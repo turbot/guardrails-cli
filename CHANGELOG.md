@@ -2,26 +2,38 @@
 
 # Release History
 
-## 1.0.0-beta.27 [2019-11-25]
+## 1.0.0-beta.29 [2019-11-28]
+
+#### Bugfixes
+- update configure to create ~/.config/turbot directory if necessary. 
+- update login command to ensure registry folder exists before reading/writing registry file.
+- template definition config not included in render context.
+
+### turbot template
+- update `template build`: move template schema to a separate file: `schema.yml`.
+- update `template build`: only write template instance config file if it is non-empty.
+
+## 1.0.0-beta.28 [2019-11-25]
 
 #### turbot template
 - remove concept of template dependencies.
 - Add `--global-config` arg to specify global template config location (defaults to `~/.config/turbot/template.yml`).
 - Update config precedences:
  ```
-   1. base config {directory, ignore}
-   2. cli global config
-   3. templateRoot config
-   4. template config
-   5. target directory config
-   6. mod derived config
-   7. instance config
-   8. template instance config
-   9. command line config
+      1. base config                                 {directory, ignore, template, version, instance}
+      2. cli global config                           ~/.config/turbot/template.yml
+      3. templateRoot config                         ${templateRoot}/template.yml 
+      4. template config (template definition)       ${templateRoot}/${template}/${version}/template.yml
+      5. target directory config (turbot_templates)  ${dir}/turbot_templates/template.yml
+      6. mod derived config                          calculated from ${dir}/turbot.head.json
+      7. instance config                             ${dir}/turbot_templates/${instance}/template.yml
+      8. template instance config                    ${dir}/turbot_templates/${instance}/${template}/template.yml
+      9. command line config
 ```
 
 #### turbot graphql
  - update `graphql --expected` to return non zero error code if it times out waiting for the expected data. 
+
 ## 1.0.0-beta.27 [2019-11-22]
 
 #### Bugfixes
