@@ -59,9 +59,6 @@ Matches:
 Matches:
 - skip
   
-   
-
-Update CLI: Update build to use node 12 and use nexe for packaging. Closes #2920
 
 ## 1.0.0-beta.29 [2019-11-28]
 
