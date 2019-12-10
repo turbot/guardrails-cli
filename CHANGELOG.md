@@ -2,6 +2,67 @@
 
 # Release History
 
+## 1.0.0-beta.30 [2019-12-10]
+
+### turbot template build
+#### fleet support
+
+`template build` command supports fleet updates. 
+
+`dir`, `template` and `instance` args now accept globs. They will do a single level directory search as follows:
+ - `dir` searchs from the working directory and returns a list of instanceRoot folder paths (note: they may not have a turbot_templates folder if no template has been rendered there).
+ - `template` searches from the `templateDefinitions` folder
+ - `instance` searches within the `turbot_templates` folder of each instance root returned by dir. (If `instance` is NOT a glob, that instance will be added to each instanceRoot if it does not exist.)
+
+#### git support (WIP)
+If the `--git` flag is passed, `turbot template build` will work as follows.
+- Before starting it checks:
+    1) you are currently on the `base branch` (specified by the arg `git-base-branch` and defaulting to `master`).
+    2) there are no uncommitted changes or unversioned files on the branch.
+   
+  If either of these checks fail, the operation fails with an error.
+
+- A new branch is created to perform the fleet operation on, named: `template_build_fleet_update_${timestamp}`
+- For each template instance: 
+  - if no previous version has been rendered, it is rendered and committed to the fleet update branch
+  - if a previous version exists the new version is rendered, and any manual changes are applies as a patch on the top.
+    - If this patching succeeds the changes are committed to the fleet update branch
+    - If the patching fails, the rendered template is committed to a separate branch  
+
+TODO: 
+In the next release, (optionally) a pull request will be created for the successful template builds, and issues will be raised for all failed updates      
+
+#### other
+- show a useful error when unable to find a template version satisfying the version requirement. 
+- add `--summary` argument to display the templates that will be rendered 
+- add `--show` argument to display the templates that would be rendered, but does not render them 
+- add `--confirm` argument to request user confirmation before rendering templates  
+- add `--verbose` argument to output extended logging information  
+
+### turbot template cleanup
+- add `turbot template cleanup` command to remove all branches created by `turbot template build`
+ 
+### turbot test
+- `--test` parameter now defaults to a case insensitive match, and also supports specific regexes by surround the string with `/.../`
+
+#### Examples:
+
+`turbot test --test skip`
+
+Matches:
+- Skip
+- Skip if foo
+- All skipped
+
+`turbot test --test /skip/`
+
+Matches:
+- skip
+  
+   
+
+Update CLI: Update build to use node 12 and use nexe for packaging. Closes #2920
+
 ## 1.0.0-beta.29 [2019-11-28]
 
 #### Bugfixes
