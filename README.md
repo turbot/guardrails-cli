@@ -1,6 +1,6 @@
 # Turbot CLI
 
-The Turbot CLI provides development tool for Turbot mods. mIt provides the following commands: 
+The Turbot CLI provides development tool for Turbot mods. It provides the following commands: 
 
 - inspect
 - test
@@ -10,7 +10,7 @@ The Turbot CLI provides development tool for Turbot mods. mIt provides the follo
 - login
 - publish
 - install
-
+- template
 
 ## turbot inspect
 
