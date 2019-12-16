@@ -2,6 +2,27 @@
 
 # Release History
 
+## 1.0.0-rc.1 [2019-12-16]
+
+#### General
+- allow use of environment variable `TURBOT_CONFIG_FOLDER` to set turbot config folder. (Defaults to `~/.config/turbot`)
+
+#### turbot test
+- add `aws-profile` argument to support AWS profiles. If this argument is provided, the CLI will try to retrieve the aws credentials for the given profile from aws credentials file.
+
+#### turbot download
+- fail gracefully if no mod name provided.
+
+#### turbot configure
+- hide the secret key entered on the command line.
+
+#### turbot install
+- remove error when the mod has no dependencies.
+
+#### turbot login, publish, install
+- add support for providing username and password on the command line.
+
+### 
 ## 1.0.0-beta.30 [2019-12-10]
 
 ### turbot template build
