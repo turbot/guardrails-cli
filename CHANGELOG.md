@@ -2,6 +2,11 @@
 
 # Release History
 
+## 1.0.0-rc.2 [2019-12-17]
+
+#### turbot test
+- add support for setting the `awsProfile` in the definition of each test. If awsProfile is provided in the test defintion, the CLI will try to retrieve the aws credentials for the given profile from the aws credentials file.
+
 ## 1.0.0-rc.1 [2019-12-16]
 
 #### General
@@ -80,9 +85,6 @@ Matches:
 Matches:
 - skip
   
-   
-
-Update CLI: Update build to use node 12 and use nexe for packaging. Closes #2920
 
 ## 1.0.0-beta.29 [2019-11-28]
 
