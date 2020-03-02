@@ -2,9 +2,10 @@
 
 load _test_base
 
+
 @test "turbot login" {
   cd $TURBOT_MODS_DIR
-  run turbot login --registry turbot-dev.com --username $USER --password $PASS
+  run turbot login --registry turbot-dev.com --username "bad-username" --password  "bad-password"
   [ "$status" -eq 255 ]
 }
 
