@@ -17,7 +17,10 @@ jobs:
           token: ${{ secrets.turbot_core_pac }}
 
       - name: Install npm packages
-        run: npm i
+        run: |
+          pwd
+          ls -al
+          npm i
 
       - name: Build CLI
         run: |
