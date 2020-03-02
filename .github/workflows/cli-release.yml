@@ -20,6 +20,7 @@ jobs:
         run: |
           pwd
           ls -al
+          rm package-lock.json
           npm i
 
       - name: Build CLI
