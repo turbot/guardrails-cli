@@ -17,42 +17,31 @@ jobs:
           repository: turbotio/turbot-core
           token: ${{ secrets.turbot_core_pac }}
 
-      - name: Create node_modules
-        run: |
-          mkdir -p node_modules/@turbot/factory
-          cd node_modules/@turbot/factory
-
-      - name: Check out factory
-        uses: actions/checkout@master
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
         with:
-          repository: turbotio/factory
-          token: ${{ secrets.turbot_core_pac }}
-
-#      - name: Install SSH key
-#        uses: shimataro/ssh-key-action@v2
-#        with:
-#          key: ${{ secrets.SSH_KEY }}
-#          name: id_rsa # optional
-#          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+          key: ${{ secrets.SSH_KEY }}
+          name: id_rsa # optional
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
 
       - name: Install npm packages
         run: |
+          pwd
+          ls -al
           rm package-lock.json
           npm i
 
       - name: Build CLI
         run: |
-          pwd
-          ls -al
-#          cd lib/@turbot/cli
-#          ./compile.sh
+          cd lib/@turbot/cli
+          ./compile.sh
 
-#      - name: Install CLI
-#        run: |
-#          cd dist
-#          unzip *linux*
-#          echo ::set-env name=PATH::"$PATH:$(pwd)"
-#          cd -
+      - name: Install CLI
+        run: |
+          cd dist
+          unzip *linux*
+          echo ::set-env name=PATH::"$PATH:$(pwd)"
+          cd -
 
       - name: Read package.json
         uses: tyankatsu0105/read-package-version-actions@v1
