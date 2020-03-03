@@ -44,15 +44,15 @@ jobs:
         run: |
           pwd
           ls -al
-          cd lib/@turbot/cli
-          ./compile.sh
+#          cd lib/@turbot/cli
+#          ./compile.sh
 
-      - name: Install CLI
-        run: |
-          cd dist
-          unzip *linux*
-          echo ::set-env name=PATH::"$PATH:$(pwd)"
-          cd -
+#      - name: Install CLI
+#        run: |
+#          cd dist
+#          unzip *linux*
+#          echo ::set-env name=PATH::"$PATH:$(pwd)"
+#          cd -
 
       - name: Read package.json
         uses: tyankatsu0105/read-package-version-actions@v1
