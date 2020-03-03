@@ -10,6 +10,12 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: Check out factory
+        uses: actions/checkout@master
+        with:
+          repository: turbotio/factory
+          token: ${{ secrets.turbot_core_pac }}
+
       - name: Check out turbot-core
         uses: actions/checkout@master
         with:
