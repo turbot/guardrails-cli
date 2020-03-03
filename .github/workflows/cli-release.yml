@@ -23,10 +23,10 @@ jobs:
           cd node_modules/@turbot/factory
 
       - name: Check out factory
-          uses: actions/checkout@master
-          with:
-            repository: turbotio/factory
-            token: ${{ secrets.turbot_core_pac }}
+        uses: actions/checkout@master
+        with:
+          repository: turbotio/factory
+          token: ${{ secrets.turbot_core_pac }}
 
 #      - name: Install SSH key
 #        uses: shimataro/ssh-key-action@v2
