@@ -37,9 +37,6 @@ jobs:
 
       - name: Install npm packages
         run: |
-          cd ../../..
-          pwd
-          ls -al
           rm package-lock.json
           npm i
 
