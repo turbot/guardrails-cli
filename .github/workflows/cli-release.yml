@@ -19,7 +19,7 @@ jobs:
 
       - name: Create node_modules
         run: |
-          makedir -p node_modules/@turbot/factory
+          mkdir -p node_modules/@turbot/factory
           cd node_modules/@turbot/factory
 
       - name: Check out factory
