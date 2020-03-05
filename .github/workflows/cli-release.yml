@@ -45,6 +45,7 @@ jobs:
       - name: Build CLI
         run: |
           echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
+          which nexe
           cd lib/@turbot/cli
           ./compile.sh
 
