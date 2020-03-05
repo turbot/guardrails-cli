@@ -47,16 +47,18 @@ jobs:
           cd lib/@turbot/cli
           ./compile.sh
 
-#      - name: Install CLI
-#        run: |
-#          cd dist
-#          unzip *linux*
-#          echo ::set-env name=PATH::"$PATH:$(pwd)"
-#          cd -
+      - name: Install CLI
+        run: |
+          cd lib/@turbot/cli/dist
+          unzip *linux*
+          echo ::set-env name=PATH::"$PATH:$(pwd)"
+          cd -
 
       - name: Read package.json
         uses: tyankatsu0105/read-package-version-actions@v1
         id: package-version
+        with:
+          path: lib/@turbot/cli
 
       - name: Show version number
         run: echo "Version is ${{ steps.package-version.outputs.version }}"
