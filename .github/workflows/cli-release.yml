@@ -44,7 +44,7 @@ jobs:
 
       - name: Build CLI
         run: |
-          which nexe
+          ls -al node_modules
 #
 #      - name: Install CLI
 #        run: |
