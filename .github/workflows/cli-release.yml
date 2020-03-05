@@ -16,6 +16,7 @@ jobs:
         with:
           repository: turbotio/turbot-core
           token: ${{ secrets.turbot_core_pac }}
+          ref: test-cli-install
 
 #      - name: Install SSH key
 #        uses: shimataro/ssh-key-action@v2
