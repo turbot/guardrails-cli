@@ -44,7 +44,7 @@ jobs:
 
       - name: Build CLI
         run: |
-          npm i nexe -g
+          which nexe
           cd lib/@turbot/cli
           ./compile.sh
 
