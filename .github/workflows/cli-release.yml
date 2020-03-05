@@ -45,15 +45,13 @@ jobs:
       - name: Build CLI
         run: |
           which nexe
-          cd lib/@turbot/cli
-          ./compile.sh
-
-      - name: Install CLI
-        run: |
-          cd lib/@turbot/cli/dist
-          unzip *linux*
-          echo ::set-env name=PATH::"$PATH:$(pwd)"
-          cd -
+#
+#      - name: Install CLI
+#        run: |
+#          cd lib/@turbot/cli/dist
+#          unzip *linux*
+#          echo ::set-env name=PATH::"$PATH:$(pwd)"
+#          cd -
 
       - name: Read package.json
         uses: tyankatsu0105/read-package-version-actions@v1
