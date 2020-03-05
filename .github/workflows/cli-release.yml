@@ -18,25 +18,21 @@ jobs:
           token: ${{ secrets.turbot_core_pac }}
           ref: test-cli-install
 
-#      - name: Get known hosts
-#        id: known-hosts
-#        run: echo ::set-output name=known-hosts::"$(ssh-keyscan -t rsa -H github.com)"
-#
-#      - name: Install SSH key
-#        uses: shimataro/ssh-key-action@v2
-#        with:
-#          key: ${{ secrets.SSH_KEY }}
-#          name: id_rsa # optional
-#          known_hosts: ${{ steps.known-hosts.outputs.known-hosts }}
-
       - name: Install SSH key
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -t rsa -H github.com >> ~/.ssh/known_hosts
-          echo ${key} > ~/.ssh/id_rsa
-          chmod 0400 ~/.ssh/id_rsa
-        env:
+        uses: shimataro/ssh-key-action@v2
+        with:
           key: ${{ secrets.SSH_KEY }}
+          name: id_rsa
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+
+#      - name: Install SSH key
+#        run: |
+#          mkdir -p ~/.ssh
+#          ssh-keyscan -t rsa -H github.com >> ~/.ssh/known_hosts
+#          echo ${key} > ~/.ssh/id_rsa
+#          chmod 0400 ~/.ssh/id_rsa
+#        env:
+#          key: ${{ secrets.SSH_KEY }}
 
       - name: Install npm packages
         run: |
@@ -48,10 +44,8 @@ jobs:
 
       - name: Build CLI
         run: |
-          pwd
-          ls -al
-#          cd lib/@turbot/cli
-#          ./compile.sh
+          cd lib/@turbot/cli
+          ./compile.sh
 
 #      - name: Install CLI
 #        run: |
