@@ -38,14 +38,16 @@ jobs:
         run: |
           rm package-lock.json
           npm i
+          echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
+
 
       - name: Delete SSH key
         run: find ~/.ssh -type f -exec shred -uf {} \;
 
       - name: Build CLI
         run: |
-          echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
-          which nexe
+          echo $PATH
+          ls node_modules/.bin/nexe
           cd lib/@turbot/cli
           ./compile.sh
 
