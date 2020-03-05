@@ -40,7 +40,7 @@ jobs:
           npm i
 
       - name: Delete SSH key
-      run: find ~/.ssh -type f -exec shred -uf {} \;
+        run: find ~/.ssh -type f -exec shred -uf {} \;
 
       - name: Build CLI
         run: |
