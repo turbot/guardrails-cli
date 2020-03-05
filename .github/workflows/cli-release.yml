@@ -23,14 +23,14 @@ jobs:
 #          key: ${{ secrets.SSH_KEY }}
 #          name: id_rsa # optional
 #          known_hosts: ${{ secrets.KNOWN_HOSTS }}
-  - name: Install SSH key
-      run: |
-        mkdir -p ~/.ssh
-        ssh-keyscan -t rsa -H github.com >> ~/.ssh/known_hosts
-        echo ${key} > ~/.ssh/id_rsa
-        chmod 0400 ~/.ssh/id_rsa
-      env:
-        key: ${{ secrets.SSH_KEY }}
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -t rsa -H github.com >> ~/.ssh/known_hosts
+          echo ${key} > ~/.ssh/id_rsa
+          chmod 0400 ~/.ssh/id_rsa
+        env:
+          key: ${{ secrets.SSH_KEY }}
 
       - name: Install npm packages
         run: |
