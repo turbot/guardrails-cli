@@ -17,12 +17,16 @@ jobs:
           repository: turbotio/turbot-core
           token: ${{ secrets.turbot_core_pac }}
 
-      - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
-        with:
+#      - name: Install SSH key
+#        uses: shimataro/ssh-key-action@v2
+#        with:
+#          key: ${{ secrets.SSH_KEY }}
+#          name: id_rsa # optional
+#          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+
+
+        env:
           key: ${{ secrets.SSH_KEY }}
-          name: id_rsa # optional
-          known_hosts: ${{ secrets.KNOWN_HOSTS }}
 
       - name: Create node_modules
         run: |
@@ -30,12 +34,13 @@ jobs:
           cd node_modules/@turbot/factory
           git clone git@github.com:turbotio/factory.git
 
-
-
       - name: Install npm packages
         run: |
           rm package-lock.json
           npm i
+
+      - name: Delete SSH key
+      run: find ~/.ssh -type f -exec shred -uf {} \;
 
       - name: Build CLI
         run: |
