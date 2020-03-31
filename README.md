@@ -18,7 +18,7 @@ create mods.
 ## License & Terms
 
 The Turbot CLI is closed source, proprietary software. It may be [downloaded
-here](https://turbot.com/v5/developers) and is subject to [Turbot's standard
-legal terms](https://turbot.com/legal).
+here](https://turbot.com/v5/developers) and is subject to the [LICENSE](./LICENSE).
 
-Examples in this repository are available under the [Apache 2.0 License](./LICENSE).
+Documentation and examples in this repository are available under the [Apache
+2.0 License](./LICENSE-DOCS).
