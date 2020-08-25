@@ -1,6 +1,5 @@
 name: CLI Automated Release
 on:
-  push:
   workflow_dispatch:
     inputs:
       releaseVersion:
@@ -16,12 +15,12 @@ jobs:
       - name: Testing flow start
         run: echo "Workflow Started"
     
-      # - name: Check out turbot-core
-      #   uses: actions/checkout@master
-      #   with:
-      #     repository: turbotio/turbot-core
-      #     token: ${{ secrets.turbot_core_pac }}
-      #     ref: master
+      - name: Check out turbot-core
+        uses: actions/checkout@master
+        with:
+          repository: turbotio/turbot-core
+          token: ${{ secrets.turbot_core_pac }}
+          ref: master
 
       # - name: Install SSH key
       #   uses: shimataro/ssh-key-action@v2
@@ -30,11 +29,11 @@ jobs:
       #     name: id_rsa
       #     known_hosts: ${{ secrets.KNOWN_HOSTS }}
           
-      # - name: Install npm packages
-      # run: |
-      #   rm package-lock.json
-      #   npm i
-      #   echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
+      - name: Install npm packages
+        run: |
+          rm package-lock.json
+          npm i
+          echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
 
       # - name: Delete SSH key
       #   run: find ~/.ssh -type f -exec shred -uf {} \;
