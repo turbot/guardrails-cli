@@ -29,22 +29,30 @@ jobs:
       #     key: ${{ secrets.SSH_KEY }}
       #     name: id_rsa
       #     known_hosts: ${{ secrets.KNOWN_HOSTS }}
+
+      - name: Cache HIT/MISS
+        uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
+
           
       - name: Install npm packages
         run: |
           rm package-lock.json
-          npm i
+          npm ci
           echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
+          echo ::set-env name=NODE_PATH::"${{ github.workspace }}/lib"
 
       # - name: Delete SSH key
       #   run: find ~/.ssh -type f -exec shred -uf {} \;
 
-      # - name: Build CLI
-      #   run: |
-      #     echo $PATH
-      #     ls node_modules/.bin/nexe
-      #     cd lib/@turbot/cli
-      #     ./compile.sh
+      - name: Build CLI
+        run: |
+          echo $PATH
+          ls node_modules/.bin/nexe
+          cd lib/@turbot/cli
+          ./compile.sh
 
       # - name: Install CLI
       #   run: |
