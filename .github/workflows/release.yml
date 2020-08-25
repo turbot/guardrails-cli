@@ -73,17 +73,20 @@ jobs:
           mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_windows_amd64.zip $HOME/build
           mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_linux_amd64.zip $HOME/build
           mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_darwin_amd64.zip $HOME/build
-        
+
+      - name: List Artifacts to save
+        run: |
+          ls -l $HOME/build
+          ls -l $GITHUB_WORKSPACE/lib/@turbot/cli/test
+
       - name: Save Build Artifacts
         uses: actions/upload-artifact@v2
-        run: ls -l $HOME/build
         with:
           name: build-artifacts
           path: $HOME/build/
-          
+
       - name: Save Acceptance Test Suite
         uses: actions/upload-artifact@v2
-        run: $GITHUB_WORKSPACE/lib/@turbot/cli/test/
         with:
           name: acceptance-test-suite
           path: $GITHUB_WORKSPACE/lib/@turbot/cli/test/
@@ -106,13 +109,12 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      
       - name: Prepare for downloads
         id: prepare-for-downloads
         run: |
           mkdir $HOME/build
           mkdir $HOME/tests
-      
+
       - name: Download Build Artifacts
         id: download-build-artifacts
         uses: actions/download-artifact@v2
