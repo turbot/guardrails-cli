@@ -33,12 +33,6 @@ jobs:
           token: ${{ secrets.turbot_core_pac }}
           ref: master
 
-      - name: Testing flow start
-        run: |
-          echo "Workflow Started"
-          echo "${{ github.workspace }}/package-lock.json"
-          ls ${{ github.workspace }}/package-lock.json
-
       - name: Use Node.js ${{ matrix.node-version }} on ${{ matrix.platform }}
         uses: actions/setup-node@v1
         with:
@@ -64,10 +58,6 @@ jobs:
           cd $GITHUB_WORKSPACE/lib/@turbot/cli
           ./compile.sh
 
-      - name: List Built CLI
-        run: |
-          ls -l $GITHUB_WORKSPACE/lib/@turbot/cli/dist
-
       - name: Read package.json
         uses: tyankatsu0105/read-package-version-actions@v1
         id: package-version
@@ -77,13 +67,6 @@ jobs:
       - name: Show version number
         run: echo "Version is ${{ steps.package-version.outputs.version }}"
 
-      - name: Upload Acceptance Test Suite
-        uses: actions/upload-artifact@v2
-        with:
-          name: acceptance-test-suite
-          path: |
-            $GITHUB_WORKSPACE/lib/@turbot/cli/test/*
-
       - name: Move build artifacts
         run: |
           mkdir $HOME/build
@@ -91,11 +74,21 @@ jobs:
           mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_linux_amd64.zip $HOME/build
           mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_darwin_amd64.zip $HOME/build
 
-      - name: Upload Build Artifacts for Acceptance Tests and Release
+      - name: List Built CLI
+        run: |
+          ls -l $HOME/build
+        
+      - name: Save Build Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: build-artifacts
           path: $HOME/build
+          
+      - name: Save Acceptance Test Suite
+        uses: actions/upload-artifact@v2
+        with:
+          name: acceptance-test-suite
+          path: $GITHUB_WORKSPACE/lib/@turbot/cli/test/
 
     outputs:
       version: ${{ steps.package-version.outputs.version }}
@@ -115,22 +108,31 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
+      
+      - name: Prepare for downloads
+        id: prepare-for-downloads
+        run: |
+          mkdir $HOME/build
+          mkdir $HOME/tests
+      
       - name: Download Build Artifacts
         id: download-build-artifacts
         uses: actions/download-artifact@v2
         with:
           name: build-artifacts
+          path: $HOME/build
 
       - name: Download Acceptance Test Suite
         id: download-acceptance-suite
         uses: actions/download-artifact@v2
         with:
           name: acceptance-test-suite
+          path: $HOME/tests
 
       - name: Check that everything got downloaded
         run: |
-          ls -l ${{ steps.download-build-artifacts.outputs.download-path }}
-          ls -l ${{ steps.download-acceptance-suite.outputs.download-path }}
+          ls -l $HOME/build
+          ls -l $HOME/tests
       # if we don't do this, Git will convert all line endings to CRLF when cloning on windows
   #     - name: Set Git to use Linux-style line endings
   #       run: |
