@@ -1,5 +1,6 @@
 name: CLI Automated Release
 on:
+  push:
   workflow_dispatch:
     inputs:
       releaseVersion:
