@@ -77,14 +77,28 @@ jobs:
       - name: Show version number
         run: echo "Version is ${{ steps.package-version.outputs.version }}"
 
+      - name: Upload Acceptance Test Suite
+        uses: actions/upload-artifact@v2
+        with:
+          name: acceptance-test-suite
+          path: |
+            $GITHUB_WORKSPACE/lib/@turbot/cli/test/*
+
+      - name: Move build artifacts
+        run: |
+          mkdir $HOME/build
+          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_windows_amd64.zip $HOME/build
+          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_linux_amd64.zip $HOME/build
+          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_darwin_amd64.zip $HOME/build
+
       - name: Upload Build Artifacts for Acceptance Tests and Release
-        uses: actions/create-release@latest
+        uses: actions/upload-artifact@v2
         with:
           name: build-artifacts
-          path: |
-            ${{github.workspace}}/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_windows_amd64.zip
-            ${{github.workspace}}/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_linux_amd64.zip
-            ${{github.workspace}}/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_darwin_amd64.zip
+          path: $HOME/build
+
+    outputs:
+      version: ${{ steps.package-version.outputs.version }}
 
   acceptance_tests:
     name: Run Acceptance Tests
@@ -101,101 +115,102 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - uses: actions/download-artifact@v2
-        id: download
+      - name: Download Build Artifacts
+        id: download-build-artifacts
+        uses: actions/download-artifact@v2
         with:
           name: build-artifacts
-          path: path/to/artifacts
 
+      - name: Download Acceptance Test Suite
+        id: download-acceptance-suite
+        uses: actions/download-artifact@v2
+        with:
+          name: acceptance-test-suite
+
+      - name: Check that everything got downloaded
+        run: |
+          ls -l ${{ steps.download-build-artifacts.outputs.download-path }}
+          ls -l ${{ steps.download-acceptance-suite.outputs.download-path }}
       # if we don't do this, Git will convert all line endings to CRLF when cloning on windows
-      - name: Set Git to use Linux-style line endings
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
-
-      - name: Check out turbot-core
-        uses: actions/checkout@master
-        with:
-          repository: turbotio/turbot-core
-          token: ${{ secrets.turbot_core_pac }}
-          ref: master
-          # we need this since the bats repo is a submodule
-          submodules: true
-
-      - name: Use Node.js ${{ matrix.node-version }} on ${{ matrix.platform }}
-        uses: actions/setup-node@v1
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Install Dependencies
-        run: npm install -g nunjucks-cli
-
-      - name: Setup Config Dir
-        run: |
-          mkdir -p ~/.config/turbot
-          touch ~/.config/turbot/config.yml
-          touch ~/.config/turbot/credentials.yml
-          touch ~/.config/turbot/registry.yml
-
-      - name: Run Test Suite
-        run: |
-          chmod +x $GITHUB_WORKSPACE/lib/@turbot/cli
-          $GITHUB_WORKSPACE/lib/@turbot/cli/test/run_acceptance.sh
-
-  release:
-    name: Release
-    needs: acceptance_tests
-
-    runs-on: ubuntu-latest
-
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    steps:
-      - name: Do Nothing
-        run: echo "Do Nothing"
-    #
-    #
-    #
-    #
-    #
-    #
-    #
-    # - name: Create Release
-    #   id: create_release
-    #   uses: actions/create-release@latest
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #   with:
-    #     tag_name: ${{  steps.package-version.outputs.version }}
-    #     release_name: ${{  steps.package-version.outputs.version }}
-    #     body: See https://turbot.com/v5/docs/releases/cli
-    #     draft: false
-    #     prerelease: false
-    # - name: Upload Mac Release Asset
-    #   uses: actions/upload-release-asset@v1
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #   with:
-    #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-    #     asset_path: dist/turbot_cli_${{ steps.package-version.outputs.version }}-beta.2_darwin_amd64.zip
-    #     asset_name: urbot_cli_${{ steps.package-version.outputs.version }}-beta.2_darwin_amd64.zip
-    #     asset_content_type: application/zip
-    # - name: Upload Linux Release Asset
-    #   uses: actions/upload-release-asset@v1
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #   with:
-    #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-    #     asset_path: dist/turbot_cli_${{ steps.package-version.outputs.version }}-beta.2_linux_amd64.zip
-    #     asset_name: urbot_cli_${{ steps.package-version.outputs.version }}-beta.2_linux_amd64.zip
-    #     asset_content_type: application/zip
-    # - name: Upload Windows Release Asset
-    #   uses: actions/upload-release-asset@v1
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #   with:
-    #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-    #     asset_path: dist/turbot_cli_${{ steps.package-version.outputs.version }}-beta.2_windows_amd64.zip
-    #     asset_name: urbot_cli_${{ steps.package-version.outputs.version }}-beta.2_windows_amd64.zip
-    #     asset_content_type: application/zip
+  #     - name: Set Git to use Linux-style line endings
+  #       run: |
+  #         git config --global core.autocrlf false
+  #         git config --global core.eol lf
+  #     - name: Check out turbot-core
+  #       uses: actions/checkout@master
+  #       with:
+  #         repository: turbotio/turbot-core
+  #         token: ${{ secrets.turbot_core_pac }}
+  #         ref: master
+  #         # we need this since the bats repo is a submodule
+  #         submodules: true
+  #     - name: Use Node.js ${{ matrix.node-version }} on ${{ matrix.platform }}
+  #       uses: actions/setup-node@v1
+  #       with:
+  #         node-version: ${{ matrix.node-version }}
+  #     - name: Install Dependencies
+  #       run: npm install -g nunjucks-cli
+  #     - name: Setup Config Dir
+  #       run: |
+  #         mkdir -p ~/.config/turbot
+  #         touch ~/.config/turbot/config.yml
+  #         touch ~/.config/turbot/credentials.yml
+  #         touch ~/.config/turbot/registry.yml
+  #     - name: Run Test Suite
+  #       run: |
+  #         chmod +x $GITHUB_WORKSPACE/lib/@turbot/cli
+  #         $GITHUB_WORKSPACE/lib/@turbot/cli/test/run_acceptance.sh
+  # release:
+  #   name: Release
+  #   needs: acceptance_tests
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #   steps:
+  #     - name: Do Nothing
+  #       run: echo "Do Nothing"
+  #
+  #
+  #
+  #
+  #
+  #
+  #
+  # - name: Create Release
+  #   id: create_release
+  #   uses: actions/create-release@latest
+  #   env:
+  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #   with:
+  #     tag_name: ${{  steps.package-version.outputs.version }}
+  #     release_name: ${{  steps.package-version.outputs.version }}
+  #     body: See https://turbot.com/v5/docs/releases/cli
+  #     draft: false
+  #     prerelease: false
+  # - name: Upload Mac Release Asset
+  #   uses: actions/upload-release-asset@v1
+  #   env:
+  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #   with:
+  #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+  #     asset_path: dist/turbot_cli_${{ steps.package-version.outputs.version }}-beta.2_darwin_amd64.zip
+  #     asset_name: urbot_cli_${{ steps.package-version.outputs.version }}-beta.2_darwin_amd64.zip
+  #     asset_content_type: application/zip
+  # - name: Upload Linux Release Asset
+  #   uses: actions/upload-release-asset@v1
+  #   env:
+  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #   with:
+  #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+  #     asset_path: dist/turbot_cli_${{ steps.package-version.outputs.version }}-beta.2_linux_amd64.zip
+  #     asset_name: urbot_cli_${{ steps.package-version.outputs.version }}-beta.2_linux_amd64.zip
+  #     asset_content_type: application/zip
+  # - name: Upload Windows Release Asset
+  #   uses: actions/upload-release-asset@v1
+  #   env:
+  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #   with:
+  #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+  #     asset_path: dist/turbot_cli_${{ steps.package-version.outputs.version }}-beta.2_windows_amd64.zip
+  #     asset_name: urbot_cli_${{ steps.package-version.outputs.version }}-beta.2_windows_amd64.zip
+  #     asset_content_type: application/zip
