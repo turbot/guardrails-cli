@@ -9,19 +9,43 @@ on:
 jobs:
   release:
     name: Release
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [12.x]
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Testing flow start
-        run: echo "Workflow Started"
+        run: |
+          echo "Workflow Started"
+          echo "${{ github.workspace }}/package-lock.json"
+          ls ${{ github.workspace }}/package-lock.json
     
+      # if we don't do this, Git will convert all line endings to CRLF when cloning on windows
+      - name: Set Git to use Linux-style line endings
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Use Node.js ${{ matrix.node-version }} on ${{ matrix.platform }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+
       - name: Check out turbot-core
         uses: actions/checkout@master
         with:
           repository: turbotio/turbot-core
           token: ${{ secrets.turbot_core_pac }}
           ref: master
+          
+      - name: Echo flow stuff
+        run: |
+          echo "${{ github.workspace }}/package-lock.json"
+          ls ${{ github.workspace }}/package-lock.json
+          echo "${{ runner.os }}-deps-${{ hashFiles('${{ github.workspace }}/package-lock.json') }}"
 
       # - name: Install SSH key
       #   uses: shimataro/ssh-key-action@v2
@@ -46,12 +70,12 @@ jobs:
       # - name: Delete SSH key
       #   run: find ~/.ssh -type f -exec shred -uf {} \;
 
-      - name: Build CLI
-        run: |
-          echo $PATH
-          ls node_modules/.bin/nexe
-          cd lib/@turbot/cli
-          ./compile.sh
+      # - name: Build CLI
+      #   run: |
+      #     echo $PATH
+      #     ls node_modules/.bin/nexe
+      #     cd lib/@turbot/cli
+      #     ./compile.sh
 
       # - name: Install CLI
       #   run: |
@@ -60,12 +84,12 @@ jobs:
       #     echo ::set-env name=PATH::"$PATH:$(pwd)"
       #     cd -
 
-      # - name: Read package.json
-      #   uses: tyankatsu0105/read-package-version-actions@v1
-      #   id: package-version
-      #   with:
-      #     path: lib/@turbot/cli
+      - name: Read package.json
+        uses: tyankatsu0105/read-package-version-actions@v1
+        id: package-version
+        with:
+          path: lib/@turbot/cli
 
-      # - name: Show version number
-      #   run: echo "Version is ${{ steps.package-version.outputs.version }}"
+      - name: Show version number
+        run: echo "Version is ${{ steps.package-version.outputs.version }}"
   
