@@ -41,11 +41,11 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Echo flow stuff
+      - name: Echo some stuff
         run: |
-          echo "${{ github.workspace }}/package-lock.json"
-          ls ${{ github.workspace }}/package-lock.json
-          echo "${{ runner.os }}-deps-${{ hashFiles('**/package-lock.json') }}"
+          echo "Cache Key: ${{ runner.os }}-deps-${{ hashFiles('**/package-lock.json') }}"
+          echo "Node Path: $GITHUB_WORKSPACE/lib"
+          ls $GITHUB_WORKSPACE/lib
 
       # - name: Install SSH key
       #   uses: shimataro/ssh-key-action@v2
@@ -62,9 +62,9 @@ jobs:
 
       - name: Install npm packages
         run: |
-          npm ci
+          npm install
           echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
-          echo ::set-env name=NODE_PATH::"${{ github.workspace }}/lib"
+          echo ::set-env name=NODE_PATH::"$GITHUB_WORKSPACE/lib"
 
       # - name: Delete SSH key
       #   run: find ~/.ssh -type f -exec shred -uf {} \;
