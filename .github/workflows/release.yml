@@ -34,12 +34,11 @@ jobs:
         uses: actions/cache@v2
         with:
           path: '**/node_modules'
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-deps-${{ hashFiles('${{ github.workspace }}/package-lock.json') }}
 
           
       - name: Install npm packages
         run: |
-          rm package-lock.json
           npm ci
           echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
           echo ::set-env name=NODE_PATH::"${{ github.workspace }}/lib"
