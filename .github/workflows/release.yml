@@ -69,12 +69,13 @@ jobs:
       # - name: Delete SSH key
       #   run: find ~/.ssh -type f -exec shred -uf {} \;
 
-      # - name: Build CLI
-      #   run: |
-      #     echo $PATH
-      #     ls node_modules/.bin/nexe
-      #     cd lib/@turbot/cli
-      #     ./compile.sh
+      - name: Build CLI
+        run: |
+          echo $PATH
+          echo $NODE_PATH
+          ls $GITHUB_WORKSPACE/node_modules/.bin/nexe
+          cd $GITHUB_WORKSPACE/lib/@turbot/cli
+          ./compile.sh
 
       # - name: Install CLI
       #   run: |
@@ -82,6 +83,9 @@ jobs:
       #     unzip *linux*
       #     echo ::set-env name=PATH::"$PATH:$(pwd)"
       #     cd -
+      - name: List Built CLI
+        run: |
+          ls -l $GITHUB_WORKSPACE/lib/@turbot/cli/dist
 
       - name: Read package.json
         uses: tyankatsu0105/read-package-version-actions@v1
