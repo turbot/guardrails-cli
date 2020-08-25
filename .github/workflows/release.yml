@@ -45,7 +45,7 @@ jobs:
         run: |
           echo "${{ github.workspace }}/package-lock.json"
           ls ${{ github.workspace }}/package-lock.json
-          echo "${{ runner.os }}-deps-${{ hashFiles('${{ github.workspace }}/package-lock.json') }}"
+          echo "${{ runner.os }}-deps-${{ hashFiles('**/package-lock.json') }}"
 
       # - name: Install SSH key
       #   uses: shimataro/ssh-key-action@v2
@@ -58,7 +58,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: "**/node_modules"
-          key: ${{ runner.os }}-deps-${{ hashFiles('${{ github.workspace }}/package-lock.json') }}
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/package-lock.json') }}
 
       - name: Install npm packages
         run: |
