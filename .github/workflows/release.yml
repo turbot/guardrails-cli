@@ -1,6 +1,6 @@
 name: CLI Automated Release
 on:
-  push: 
+  push:
   # workflow_dispatch:
   #   inputs:
   #     releaseVersion:
@@ -17,22 +17,11 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - name: Testing flow start
-        run: |
-          echo "Workflow Started"
-          echo "${{ github.workspace }}/package-lock.json"
-          ls ${{ github.workspace }}/package-lock.json
-    
       # if we don't do this, Git will convert all line endings to CRLF when cloning on windows
       - name: Set Git to use Linux-style line endings
         run: |
           git config --global core.autocrlf false
           git config --global core.eol lf
-
-      - name: Use Node.js ${{ matrix.node-version }} on ${{ matrix.platform }}
-        uses: actions/setup-node@v1
-        with:
-          node-version: ${{ matrix.node-version }}
 
       - name: Check out turbot-core
         uses: actions/checkout@master
@@ -40,7 +29,18 @@ jobs:
           repository: turbotio/turbot-core
           token: ${{ secrets.turbot_core_pac }}
           ref: master
-          
+
+      - name: Testing flow start
+        run: |
+          echo "Workflow Started"
+          echo "${{ github.workspace }}/package-lock.json"
+          ls ${{ github.workspace }}/package-lock.json
+
+      - name: Use Node.js ${{ matrix.node-version }} on ${{ matrix.platform }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+
       - name: Echo flow stuff
         run: |
           echo "${{ github.workspace }}/package-lock.json"
@@ -57,10 +57,9 @@ jobs:
       - name: Cache HIT/MISS
         uses: actions/cache@v2
         with:
-          path: '**/node_modules'
+          path: "**/node_modules"
           key: ${{ runner.os }}-deps-${{ hashFiles('${{ github.workspace }}/package-lock.json') }}
 
-          
       - name: Install npm packages
         run: |
           npm ci
@@ -92,4 +91,3 @@ jobs:
 
       - name: Show version number
         run: echo "Version is ${{ steps.package-version.outputs.version }}"
-  
