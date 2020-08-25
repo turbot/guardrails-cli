@@ -142,18 +142,18 @@ jobs:
           chmod +x $GITHUB_WORKSPACE/lib/@turbot/cli
           $GITHUB_WORKSPACE/lib/@turbot/cli/test/run_acceptance.sh
 
-release:
-  name: Release
-  needs: acceptance_tests
+  release:
+    name: Release
+    needs: acceptance_tests
 
-  runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
 
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  steps:
-    - name: Do Nothing
-      run: echo "Do Nothing"
+    steps:
+      - name: Do Nothing
+        run: echo "Do Nothing"
     #
     #
     #
