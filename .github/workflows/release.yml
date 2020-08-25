@@ -83,13 +83,13 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: build-artifacts
-          path: $HOME/build/
+          path: $HOME/build
 
       - name: Save Acceptance Test Suite
         uses: actions/upload-artifact@v2
         with:
           name: acceptance-test-suite
-          path: $GITHUB_WORKSPACE/lib/@turbot/cli/test/
+          path: $GITHUB_WORKSPACE/lib/@turbot/cli/test
 
     outputs:
       version: ${{ steps.package-version.outputs.version }}
