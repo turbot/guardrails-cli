@@ -12,12 +12,15 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - name: Check out turbot-core
-        uses: actions/checkout@master
-        with:
-          repository: turbotio/turbot-core
-          token: ${{ secrets.turbot_core_pac }}
-          ref: master
+      - name: Testing flow start
+        run: echo "Workflow Started"
+    
+      # - name: Check out turbot-core
+      #   uses: actions/checkout@master
+      #   with:
+      #     repository: turbotio/turbot-core
+      #     token: ${{ secrets.turbot_core_pac }}
+      #     ref: master
 
       # - name: Install SSH key
       #   uses: shimataro/ssh-key-action@v2
@@ -26,21 +29,21 @@ jobs:
       #     name: id_rsa
       #     known_hosts: ${{ secrets.KNOWN_HOSTS }}
           
-      - name: Install npm packages
-      run: |
-        rm package-lock.json
-        npm i
-        echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
+      # - name: Install npm packages
+      # run: |
+      #   rm package-lock.json
+      #   npm i
+      #   echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
 
       # - name: Delete SSH key
       #   run: find ~/.ssh -type f -exec shred -uf {} \;
 
-      - name: Build CLI
-        run: |
-          echo $PATH
-          ls node_modules/.bin/nexe
-          cd lib/@turbot/cli
-          ./compile.sh
+      # - name: Build CLI
+      #   run: |
+      #     echo $PATH
+      #     ls node_modules/.bin/nexe
+      #     cd lib/@turbot/cli
+      #     ./compile.sh
 
       # - name: Install CLI
       #   run: |
@@ -49,12 +52,12 @@ jobs:
       #     echo ::set-env name=PATH::"$PATH:$(pwd)"
       #     cd -
 
-      - name: Read package.json
-        uses: tyankatsu0105/read-package-version-actions@v1
-        id: package-version
-        with:
-          path: lib/@turbot/cli
+      # - name: Read package.json
+      #   uses: tyankatsu0105/read-package-version-actions@v1
+      #   id: package-version
+      #   with:
+      #     path: lib/@turbot/cli
 
-      - name: Show version number
-        run: echo "Version is ${{ steps.package-version.outputs.version }}"
+      # - name: Show version number
+      #   run: echo "Version is ${{ steps.package-version.outputs.version }}"
   
