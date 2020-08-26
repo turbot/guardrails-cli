@@ -199,11 +199,13 @@ jobs:
           echo ::set-env name=PATH::"$PATH:$HOME/build"
           unzip ~/artifacts/tests.zip -d ~/tests
           ls -l ~/tests
+          echo ::set-env name=PATH::"$PATH:$HOME/tests/acceptance/bats_tests/libs/bats/libexec"
           cd ~/tests
           npm install console.table
           npm install js-yaml
 
       - name: Setup Config Dir
+        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
         run: |
           mkdir -p $HOME/.config/turbot
           touch $HOME/.config/turbot/config.yml
