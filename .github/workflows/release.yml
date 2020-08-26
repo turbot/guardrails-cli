@@ -70,43 +70,43 @@ jobs:
 
       - name: Move build artifacts
         run: |
-          mkdir $HOME/artifacts
-          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_windows_amd64.zip $HOME/artifacts/windows.zip
-          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_linux_amd64.zip $HOME/artifacts/linux.zip
-          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_darwin_amd64.zip $HOME/artifacts/darwin.zip
+          mkdir ~/artifacts
+          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_windows_amd64.zip ~/artifacts/windows.zip
+          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_linux_amd64.zip ~/artifacts/linux.zip
+          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_darwin_amd64.zip ~/artifacts/darwin.zip
 
       - name: Zip up Acceptance Test Suite
-        run: zip -r $HOME/artifacts/tests.zip $GITHUB_WORKSPACE/lib/@turbot/cli/test
+        run: zip -r ~/artifacts/tests.zip $GITHUB_WORKSPACE/lib/@turbot/cli/test
 
       - name: List Build Artifacts
-        run: ls -l $HOME/artifacts
+        run: ls -l ~/artifacts
 
       - name: Save Windows Build Artifact
         uses: actions/upload-artifact@v2
         with:
           name: build-artifact-windows
-          path: $HOME/artifacts/windows.zip
+          path: ~/artifacts/windows.zip
           if-no-files-found: error
 
       - name: Save Linux Build Artifact
         uses: actions/upload-artifact@v2
         with:
           name: build-artifact-linux
-          path: $HOME/artifacts/linux.zip
+          path: ~/artifacts/linux.zip
           if-no-files-found: error
 
       - name: Save Windows Build Artifact
         uses: actions/upload-artifact@v2
         with:
           name: build-artifact-darwin
-          path: $HOME/artifacts/darwin.zip
+          path: ~/artifacts/darwin.zip
           if-no-files-found: error
 
       - name: Save Acceptance Test Suite
         uses: actions/upload-artifact@v2
         with:
           name: test-artifact
-          path: $HOME/artifacts/tests.zip
+          path: ~/artifacts/tests.zip
           if-no-files-found: error
 
     outputs:
@@ -130,39 +130,39 @@ jobs:
       - name: Prepare for downloads
         id: prepare-for-downloads
         run: |
-          mkdir $HOME/artifacts
+          mkdir ~/artifacts
 
       - name: Download Windows Build Artifacts
         uses: actions/download-artifact@v2
         # if: ${{ matrix.platform == 'windows-latest' }}
         with:
           name: build-artifact-windows
-          path: $HOME/artifacts
+          path: ~/artifacts
 
       - name: Download Linux Build Artifacts
         uses: actions/download-artifact@v2
         # if: ${{ matrix.platform == 'ubuntu-latest' }}
         with:
           name: build-artifact-linux
-          path: $HOME/artifacts
+          path: ~/artifacts
 
       - name: Download Darwin Build Artifacts
         uses: actions/download-artifact@v2
         # if: ${{ matrix.platform == 'macos-latest' }}
         with:
           name: build-artifact-darwin
-          path: $HOME/artifacts
+          path: ~/artifacts
 
       - name: Download Acceptance Test Suite
         id: download-acceptance-suite
         uses: actions/download-artifact@v2
         with:
           name: test-artifact
-          path: $HOME/artifacts
+          path: ~/artifacts
 
       - name: Check that everything got downloaded
         run: |
-          ls -l $HOME/artifacts
+          ls -l ~/artifacts
   # if we don't do this, Git will convert all line endings to CRLF when cloning on windows
   #     - name: Set Git to use Linux-style line endings
   #       run: |
