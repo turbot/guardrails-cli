@@ -32,6 +32,7 @@ jobs:
           repository: turbotio/turbot-core
           token: ${{ secrets.turbot_core_pac }}
           ref: master
+          submodules: true
 
       - name: Use Node.js ${{ matrix.node-version }} on ${{ matrix.platform }}
         uses: actions/setup-node@v1
@@ -112,7 +113,7 @@ jobs:
       version: ${{ steps.package-version.outputs.version }}
 
   acceptance_tests:
-    name: Run Acceptance Tests
+    name: Run Acceptance Tests on ${{ matrix.platform }}
     needs: build
 
     strategy:
@@ -133,18 +134,21 @@ jobs:
 
       - name: Download Windows Build Artifacts
         uses: actions/download-artifact@v2
+        # if: ${{ matrix.platform == 'windows-latest' }}
         with:
           name: build-artifact-windows
           path: $HOME/artifacts
 
       - name: Download Linux Build Artifacts
         uses: actions/download-artifact@v2
+        # if: ${{ matrix.platform == 'ubuntu-latest' }}
         with:
           name: build-artifact-linux
           path: $HOME/artifacts
 
       - name: Download Darwin Build Artifacts
         uses: actions/download-artifact@v2
+        # if: ${{ matrix.platform == 'macos-latest' }}
         with:
           name: build-artifact-darwin
           path: $HOME/artifacts
