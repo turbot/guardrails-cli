@@ -124,7 +124,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TURBOT_CLI_ACC_PROFILE: acceptance_test_profile
-      TURBOT_CLI_ACC_REGISTRY: turbot-dev.com
+      TURBOT_CLI_ACC_REGISTRY: turbot-stg.com
       TURBOT_CLI_ACC_ACCESS_KEY: ${{ secrets.TURBOT_CLI_ACC_ACCESS_KEY }}
       TURBOT_CLI_ACC_SECRET_KEY: ${{ secrets.TURBOT_CLI_ACC_SECRET_KEY }}
       TURBOT_CLI_ACC_WORKSPACE: ${{ secrets.TURBOT_CLI_ACC_WORKSPACE }}
@@ -211,7 +211,6 @@ jobs:
         if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
         run: |
           chmod +x $HOME/tests/run_acceptance.sh
-          cd -
           $HOME/tests/run_acceptance.sh
 
   create_release:
