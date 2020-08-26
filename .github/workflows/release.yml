@@ -74,11 +74,6 @@ jobs:
           mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_linux_amd64.zip $HOME/artifacts/linux.zip
           mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_darwin_amd64.zip $HOME/artifacts/darwin.zip
 
-      - name: Zip up Acceptance Test Suite
-        uses: montudor/action-zip@v0.1.0
-        with:
-          args: zip -qq -r $HOME/artifacts/tests.zip $GITHUB_WORKSPACE/lib/@turbot/cli/test
-
       - name: Save Windows Build Artifact
         uses: actions/upload-artifact@v2
         with:
@@ -97,6 +92,11 @@ jobs:
           name: build-artifact-darwin
           path: $HOME/artifacts/darwin.zip
 
+      - name: Zip up Acceptance Test Suite
+      uses: montudor/action-zip@v0.1.0
+      with:
+        args: zip -qq -r $HOME/artifacts/tests.zip $GITHUB_WORKSPACE/lib/@turbot/cli/test
+  
       - name: Save Acceptance Test Suite
         uses: actions/upload-artifact@v2
         with:
