@@ -144,12 +144,12 @@ jobs:
         run: |
           mkdir ~/artifacts
 
-      - name: Download Windows Build Artifacts
-        uses: actions/download-artifact@v2
-        if: ${{ matrix.platform == 'windows-latest' }}
-        with:
-          name: build-artifact-windows
-          path: ~/artifacts
+      # - name: Download Windows Build Artifacts
+      #   uses: actions/download-artifact@v2
+      #   if: ${{ matrix.platform == 'windows-latest' }}
+      #   with:
+      #     name: build-artifact-windows
+      #     path: ~/artifacts
 
       - name: Download Linux Build Artifacts
         uses: actions/download-artifact@v2
@@ -174,31 +174,43 @@ jobs:
       - name: Check that everything got downloaded
         run: |
           ls -l ~/artifacts
+          
+      - name: Rename build artifact on Darwin
+        if: ${{ matrix.platform == 'macos-latest' }}
+        run: mv ~/artifacts/darwin.zip ~/artifacts/build.zip
+          
+      - name: Rename build artifact on Linux
+        if: ${{ matrix.platform == 'ubuntu-latest' }}
+        run: mv ~/artifacts/linux.zip ~/artifacts/build.zip
 
-      # - name: Extract Artifacts and Install Binary
-      #   if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
-      #   run: |
-      #     mkdir $HOME/build
-      #     mkdir $HOME/tests
-      #     unzip $HOME/artifacts/build.zip -d ~/build
-      #     unzip $HOME/artifacts/tests.zip -d ~/tests
-      #     ls -l $HOME/build
-      #     ls -l $HOME/tests
-      #     echo ::set-env name=PATH::"$PATH:$($HOME/build)"
+      - name: Check that renaming is good
+        run: |
+          ls -l ~/artifacts
 
-      # - name: Setup Config Dir
-      #   run: |
-      #     mkdir -p $HOME/.config/turbot
-      #     touch $HOME/.config/turbot/config.yml
-      #     touch $HOME/.config/turbot/credentials.yml
-      #     touch $HOME/.config/turbot/registry.yml
+      - name: Extract Artifacts and Install Binary
+        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
+        run: |
+          mkdir ~/build
+          mkdir ~/tests
+          unzip ~/artifacts/build.zip -d ~/build
+          unzip ~/artifacts/tests.zip -d ~/tests
+          ls -l ~/build
+          ls -l ~/tests
+          echo ::set-env name=PATH::"$PATH:$($HOME/build)"
 
-      # - name: Run Tests
-      #   if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
-      #   run: |
-      #     chmod +x $HOME/tests/run_acceptance.sh
-      #     cd -
-      #       $HOME/tests/run_acceptance.sh
+      - name: Setup Config Dir
+        run: |
+          mkdir -p $HOME/.config/turbot
+          touch $HOME/.config/turbot/config.yml
+          touch $HOME/.config/turbot/credentials.yml
+          touch $HOME/.config/turbot/registry.yml
+
+      - name: Run Tests
+        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
+        run: |
+          chmod +x $HOME/tests/run_acceptance.sh
+          cd -
+          $HOME/tests/run_acceptance.sh
 
   create_release:
     name: Create Release
