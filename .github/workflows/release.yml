@@ -93,9 +93,9 @@ jobs:
           path: $HOME/artifacts/darwin.zip
 
       - name: Zip up Acceptance Test Suite
-      uses: montudor/action-zip@v0.1.0
-      with:
-        args: zip -qq -r $HOME/artifacts/tests.zip $GITHUB_WORKSPACE/lib/@turbot/cli/test
+        uses: montudor/action-zip@v0.1.0
+        with:
+          args: zip -qq -r $HOME/artifacts/tests.zip $GITHUB_WORKSPACE/lib/@turbot/cli/test
   
       - name: Save Acceptance Test Suite
         uses: actions/upload-artifact@v2
