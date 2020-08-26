@@ -180,13 +180,11 @@ jobs:
         run: |
           mkdir ~/build
           mkdir ~/tests
-          cd ~/artifacts
-          unzip build.zip -d ~/build
-          unzip tests.zip -d ~/tests
-          echo ::set-env name=PATH::"$PATH:$(pwd)"
-          cd -
+          unzip ~/artifacts/build.zip -d ~/build
+          unzip ~/artifacts/tests.zip -d ~/tests
           ls -l ~/build
           ls -l ~/tests
+          echo ::set-env name=PATH::"$PATH:$(~/build)"
 
       - name: Setup Config Dir
         run: |
