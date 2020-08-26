@@ -9,12 +9,7 @@ on:
 jobs:
   build:
     name: Build
-    strategy:
-      matrix:
-        node-version: [12.x]
-        platform: [ubuntu-latest]
-
-    runs-on: ${{ matrix.platform }}
+    runs-on: ubuntu-latest
 
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -34,10 +29,10 @@ jobs:
           ref: master
           submodules: true
 
-      - name: Use Node.js ${{ matrix.node-version }} on ${{ matrix.platform }}
+      - name: Use Node.js 12.x
         uses: actions/setup-node@v1
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 12.x
 
       - name: Cache HIT/MISS
         uses: actions/cache@v2
@@ -76,7 +71,9 @@ jobs:
           mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_darwin_amd64.zip ~/artifacts/darwin.zip
 
       - name: Zip up Acceptance Test Suite
-        run: zip -r ~/artifacts/tests.zip $GITHUB_WORKSPACE/lib/@turbot/cli/test
+        run: |
+          mv $GITHUB_WORKSPACE/lib/@turbot/cli/test ~/tests
+          zip -r ~/artifacts/tests.zip ~/tests/
 
       - name: List Build Artifacts
         run: ls -l ~/artifacts
@@ -118,15 +115,30 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [12.x] # this is required for the nunjucks-cli
         platform: [ubuntu-latest, macos-latest]
 
     runs-on: ${{ matrix.platform }}
 
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TURBOT_CLI_ACC_PROFILE: acceptance_test_profile
+      TURBOT_CLI_ACC_REGISTRY: turbot-dev.com
+      TURBOT_CLI_ACC_ACCESS_KEY: ${{ secrets.TURBOT_CLI_ACC_ACCESS_KEY }}
+      TURBOT_CLI_ACC_SECRET_KEY: ${{ secrets.TURBOT_CLI_ACC_SECRET_KEY }}
+      TURBOT_CLI_ACC_WORKSPACE: ${{ secrets.TURBOT_CLI_ACC_WORKSPACE }}
+      TURBOT_CLI_ACC_REGISTRY_USER: ${{ secrets.TURBOT_CLI_ACC_REGISTRY_USER }}
+      TURBOT_CLI_ACC_REGISTRY_PASS: ${{ secrets.TURBOT_CLI_ACC_REGISTRY_PASS }}
 
     steps:
+      - name: Setting up Node.js 12.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+
+      - name: Install Nunjucks CLI
+        run: |
+          npm install -g nunjucks-cli
+
       - name: Prepare for downloads
         id: prepare-for-downloads
         run: |
@@ -134,73 +146,110 @@ jobs:
 
       - name: Download Windows Build Artifacts
         uses: actions/download-artifact@v2
-        # if: ${{ matrix.platform == 'windows-latest' }}
+        if: ${{ matrix.platform == 'windows-latest' }}
         with:
           name: build-artifact-windows
-          path: ~/artifacts
+          path: ~/artifacts/build.zip
 
       - name: Download Linux Build Artifacts
         uses: actions/download-artifact@v2
-        # if: ${{ matrix.platform == 'ubuntu-latest' }}
+        if: ${{ matrix.platform == 'ubuntu-latest' }}
         with:
           name: build-artifact-linux
-          path: ~/artifacts
+          path: ~/artifacts/build.zip
 
       - name: Download Darwin Build Artifacts
         uses: actions/download-artifact@v2
-        # if: ${{ matrix.platform == 'macos-latest' }}
+        if: ${{ matrix.platform == 'macos-latest' }}
         with:
           name: build-artifact-darwin
-          path: ~/artifacts
+          path: ~/artifacts/build.zip
 
       - name: Download Acceptance Test Suite
-        id: download-acceptance-suite
         uses: actions/download-artifact@v2
         with:
           name: test-artifact
-          path: ~/artifacts
+          path: ~/artifacts/tests.zip
 
       - name: Check that everything got downloaded
         run: |
           ls -l ~/artifacts
-  # if we don't do this, Git will convert all line endings to CRLF when cloning on windows
-  #     - name: Set Git to use Linux-style line endings
-  #       run: |
-  #         git config --global core.autocrlf false
-  #         git config --global core.eol lf
-  #     - name: Check out turbot-core
-  #       uses: actions/checkout@master
-  #       with:
-  #         repository: turbotio/turbot-core
-  #         token: ${{ secrets.turbot_core_pac }}
-  #         ref: master
-  #         # we need this since the bats repo is a submodule
-  #         submodules: true
-  #     - name: Use Node.js ${{ matrix.node-version }} on ${{ matrix.platform }}
-  #       uses: actions/setup-node@v1
-  #       with:
-  #         node-version: ${{ matrix.node-version }}
-  #     - name: Install Dependencies
-  #       run: npm install -g nunjucks-cli
-  #     - name: Setup Config Dir
-  #       run: |
-  #         mkdir -p ~/.config/turbot
-  #         touch ~/.config/turbot/config.yml
-  #         touch ~/.config/turbot/credentials.yml
-  #         touch ~/.config/turbot/registry.yml
-  #     - name: Run Test Suite
-  #       run: |
-  #         chmod +x $GITHUB_WORKSPACE/lib/@turbot/cli
-  #         $GITHUB_WORKSPACE/lib/@turbot/cli/test/run_acceptance.sh
-  # release:
-  #   name: Release
-  #   needs: acceptance_tests
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #   steps:
-  #     - name: Do Nothing
-  #       run: echo "Do Nothing"
+
+      - name: Extract Artifacts and Install Binary
+        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
+        run: |
+          mkdir ~/build
+          mkdir ~/tests
+          cd ~/artifacts
+          unzip build.zip -d ~/build
+          unzip tests.zip -d ~/tests
+          echo ::set-env name=PATH::"$PATH:$(pwd)"
+          cd -
+          ls -l ~/build
+          ls -l ~/tests
+
+      - name: Setup Config Dir
+        run: |
+          mkdir -p ~/.config/turbot
+          touch ~/.config/turbot/config.yml
+          touch ~/.config/turbot/credentials.yml
+          touch ~/.config/turbot/registry.yml
+
+      - name: Run Tests
+        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
+        run: |
+          chmod +x ~/tests/run_acceptance.sh
+          cd -
+          ~/tests/run_acceptance.sh
+
+  create_release:
+    name: Create Release
+    needs: [build, acceptance_tests]
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Do Nothing
+        run: echo "Do Nothing"
+
+  upload_release_assets:
+    name: Upload Release assets
+    needs: create_release
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Do Nothing
+        run: echo "Do Nothing"
+
+  clean_up:
+    name: Clean Up Artifacts
+    needs: upload_release_assets
+    runs_on: ubuntu-latest
+    steps:
+      - name: Clean up Windows Build
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: build-artifact-windows
+          failOnError: true
+
+      - name: Clean up Linux Build
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: build-artifact-linux
+          failOnError: true
+
+      - name: Clean up Darwin Build
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: build-artifact-darwin
+          failOnError: true
+
+      - name: Clean up Test Suite
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: test-artifact
+          failOnError: true
   #
   #
   #
