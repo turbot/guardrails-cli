@@ -196,10 +196,9 @@ jobs:
           mkdir ~/tests
           unzip ~/artifacts/build.zip -d ~/build
           ls -l ~/build
-          echo ::set-env name=PATH::"$PATH:$HOME/build"
           unzip ~/artifacts/tests.zip -d ~/tests
           ls -l ~/tests
-          echo ::set-env name=PATH::"$PATH:$HOME/tests/acceptance/bats_tests/libs/bats/libexec"
+          echo ::set-env name=PATH::"$PATH:$HOME/build:$HOME/tests/acceptance/bats_tests/libs/bats/libexec"
           cd ~/tests
           npm install console.table
           npm install js-yaml
