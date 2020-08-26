@@ -73,7 +73,9 @@ jobs:
       - name: Zip up Acceptance Test Suite
         run: |
           mv $GITHUB_WORKSPACE/lib/@turbot/cli/test ~/tests
-          zip -r ~/artifacts/tests.zip ~/tests/
+          cd ~/tests
+          zip -r ~/artifacts/tests.zip .
+          cd -
 
       - name: List Build Artifacts
         run: ls -l ~/artifacts
@@ -196,7 +198,7 @@ jobs:
           unzip ~/artifacts/tests.zip -d ~/tests
           ls -l ~/build
           ls -l ~/tests
-          echo ::set-env name=PATH::"$PATH:$($HOME/build)"
+          echo ::set-env name=PATH::"$PATH:$HOME/build"
 
       - name: Setup Config Dir
         run: |
