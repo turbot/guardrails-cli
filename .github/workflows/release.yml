@@ -225,7 +225,7 @@ jobs:
   clean_up:
     name: Clean Up Artifacts
     needs: upload_release_assets
-    runs_on: ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Clean up Windows Build
         uses: geekyeggo/delete-artifact@v1
