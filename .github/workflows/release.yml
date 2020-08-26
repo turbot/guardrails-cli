@@ -201,6 +201,7 @@ jobs:
           ls -l ~/tests
           cd ~/tests
           npm install console.table
+          npm install js-yaml
 
       - name: Setup Config Dir
         run: |
