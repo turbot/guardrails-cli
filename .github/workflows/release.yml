@@ -149,56 +149,56 @@ jobs:
         if: ${{ matrix.platform == 'windows-latest' }}
         with:
           name: build-artifact-windows
-          path: ~/artifacts/build.zip
+          path: ~/artifacts
 
       - name: Download Linux Build Artifacts
         uses: actions/download-artifact@v2
         if: ${{ matrix.platform == 'ubuntu-latest' }}
         with:
           name: build-artifact-linux
-          path: ~/artifacts/build.zip
+          path: ~/artifacts
 
       - name: Download Darwin Build Artifacts
         uses: actions/download-artifact@v2
         if: ${{ matrix.platform == 'macos-latest' }}
         with:
           name: build-artifact-darwin
-          path: ~/artifacts/build.zip
+          path: ~/artifacts
 
       - name: Download Acceptance Test Suite
         uses: actions/download-artifact@v2
         with:
           name: test-artifact
-          path: ~/artifacts/tests.zip
+          path: ~/artifacts
 
       - name: Check that everything got downloaded
         run: |
           ls -l ~/artifacts
 
-      - name: Extract Artifacts and Install Binary
-        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
-        run: |
-          mkdir $HOME/build
-          mkdir $HOME/tests
-          unzip $HOME/artifacts/build.zip -d ~/build
-          unzip $HOME/artifacts/tests.zip -d ~/tests
-          ls -l $HOME/build
-          ls -l $HOME/tests
-          echo ::set-env name=PATH::"$PATH:$($HOME/build)"
+      # - name: Extract Artifacts and Install Binary
+      #   if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
+      #   run: |
+      #     mkdir $HOME/build
+      #     mkdir $HOME/tests
+      #     unzip $HOME/artifacts/build.zip -d ~/build
+      #     unzip $HOME/artifacts/tests.zip -d ~/tests
+      #     ls -l $HOME/build
+      #     ls -l $HOME/tests
+      #     echo ::set-env name=PATH::"$PATH:$($HOME/build)"
 
-      - name: Setup Config Dir
-        run: |
-          mkdir -p $HOME/.config/turbot
-          touch $HOME/.config/turbot/config.yml
-          touch $HOME/.config/turbot/credentials.yml
-          touch $HOME/.config/turbot/registry.yml
+      # - name: Setup Config Dir
+      #   run: |
+      #     mkdir -p $HOME/.config/turbot
+      #     touch $HOME/.config/turbot/config.yml
+      #     touch $HOME/.config/turbot/credentials.yml
+      #     touch $HOME/.config/turbot/registry.yml
 
-      - name: Run Tests
-        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
-        run: |
-          chmod +x $HOME/tests/run_acceptance.sh
-          cd -
-            $HOME/tests/run_acceptance.sh
+      # - name: Run Tests
+      #   if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
+      #   run: |
+      #     chmod +x $HOME/tests/run_acceptance.sh
+      #     cd -
+      #       $HOME/tests/run_acceptance.sh
 
   create_release:
     name: Create Release
