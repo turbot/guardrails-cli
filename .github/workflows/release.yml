@@ -74,42 +74,39 @@ jobs:
           mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_linux_amd64.zip $HOME/artifacts/linux.zip
           mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_darwin_amd64.zip $HOME/artifacts/darwin.zip
 
+      - name: Zip up Acceptance Test Suite
+        run: zip -r $HOME/artifacts/tests.zip $GITHUB_WORKSPACE/lib/@turbot/cli/test
+
       - name: List Build Artifacts
-        run: |
-          echo $HOME
-          ls -l $HOME/artifacts
+        run: ls -l $HOME/artifacts
 
       - name: Save Windows Build Artifact
         uses: actions/upload-artifact@v2
         with:
           name: build-artifact-windows
           path: $HOME/artifacts/windows.zip
+          if-no-files-found: error
 
       - name: Save Linux Build Artifact
         uses: actions/upload-artifact@v2
         with:
           name: build-artifact-linux
           path: $HOME/artifacts/linux.zip
+          if-no-files-found: error
 
       - name: Save Windows Build Artifact
         uses: actions/upload-artifact@v2
         with:
           name: build-artifact-darwin
           path: $HOME/artifacts/darwin.zip
-          
-      - name: List Test Suite
-        run: |
-          echo $HOME
-          ls -l $GITHUB_WORKSPACE/lib/@turbot/cli/test
-
-      - name: Zip up Acceptance Test Suite
-        run: zip -r $HOME/artifacts/tests.zip $GITHUB_WORKSPACE/lib/@turbot/cli/test
+          if-no-files-found: error
 
       - name: Save Acceptance Test Suite
         uses: actions/upload-artifact@v2
         with:
           name: test-artifact
           path: $HOME/artifacts/tests.zip
+          if-no-files-found: error
 
     outputs:
       version: ${{ steps.package-version.outputs.version }}
