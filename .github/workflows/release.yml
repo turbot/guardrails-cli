@@ -69,27 +69,39 @@ jobs:
 
       - name: Move build artifacts
         run: |
-          mkdir $HOME/build
-          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_windows_amd64.zip $HOME/build
-          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_linux_amd64.zip $HOME/build
-          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_darwin_amd64.zip $HOME/build
+          mkdir $HOME/artifacts
+          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_windows_amd64.zip $HOME/artifacts/windows.zip
+          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_linux_amd64.zip $HOME/artifacts/linux.zip
+          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_darwin_amd64.zip $HOME/artifacts/darwin.zip
 
-      - name: List Artifacts to save
-        run: |
-          ls -l $HOME/build
-          ls -l $GITHUB_WORKSPACE/lib/@turbot/cli/test
+      - name: Zip up Acceptance Test Suite
+        uses: montudor/action-zip@v0.1.0
+        with:
+          args: zip -qq -r $HOME/artifacts/tests.zip $GITHUB_WORKSPACE/lib/@turbot/cli/test
 
-      - name: Save Build Artifacts
+      - name: Save Windows Build Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: build-artifacts
-          path: $HOME/build
+          name: build-artifact-windows
+          path: $HOME/artifacts/windows.zip
+
+      - name: Save Linux Build Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-artifact-linux
+          path: $HOME/artifacts/linux.zip
+
+      - name: Save Windows Build Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-artifact-darwin
+          path: $HOME/artifacts/darwin.zip
 
       - name: Save Acceptance Test Suite
         uses: actions/upload-artifact@v2
         with:
-          name: acceptance-test-suite
-          path: $GITHUB_WORKSPACE/lib/@turbot/cli/test
+          name: test-artifact
+          path: $HOME/artifacts/tests.zip
 
     outputs:
       version: ${{ steps.package-version.outputs.version }}
@@ -112,28 +124,38 @@ jobs:
       - name: Prepare for downloads
         id: prepare-for-downloads
         run: |
-          mkdir $HOME/build
-          mkdir $HOME/tests
+          mkdir $HOME/artifacts
 
-      - name: Download Build Artifacts
-        id: download-build-artifacts
+      - name: Download Windows Build Artifacts
         uses: actions/download-artifact@v2
         with:
-          name: build-artifacts
-          path: $HOME/build
+          name: build-artifact-windows
+          path: $HOME/artifacts
+
+      - name: Download Linux Build Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: build-artifact-linux
+          path: $HOME/artifacts
+
+      - name: Download Darwin Build Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: build-artifact-darwin
+          path: $HOME/artifacts
 
       - name: Download Acceptance Test Suite
         id: download-acceptance-suite
         uses: actions/download-artifact@v2
         with:
-          name: acceptance-test-suite
-          path: $HOME/tests
+          name: test-artifact
+          path: $HOME/artifacts
 
       - name: Check that everything got downloaded
         run: |
-          ls -l $HOME/build
-          ls -l $HOME/tests
-      # if we don't do this, Git will convert all line endings to CRLF when cloning on windows
+          ls -l $HOME/artifacts
+
+  # if we don't do this, Git will convert all line endings to CRLF when cloning on windows
   #     - name: Set Git to use Linux-style line endings
   #       run: |
   #         git config --global core.autocrlf false
