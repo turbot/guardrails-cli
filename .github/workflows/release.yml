@@ -167,20 +167,20 @@ jobs:
           name: build-artifact-darwin
           path: ~/artifacts
 
-      - name: Download Acceptance Test Suite
-        uses: actions/download-artifact@v2
-        with:
-          name: test-artifact
-          path: ~/artifacts
+      # - name: Download Acceptance Test Suite
+      #   uses: actions/download-artifact@v2
+      #   with:
+      #     name: test-artifact
+      #     path: ~/artifacts
 
       - name: Check that everything got downloaded
         run: |
           ls -l ~/artifacts
-          
+
       - name: Rename build artifact on Darwin
         if: ${{ matrix.platform == 'macos-latest' }}
         run: mv ~/artifacts/darwin.zip ~/artifacts/build.zip
-          
+
       - name: Rename build artifact on Linux
         if: ${{ matrix.platform == 'ubuntu-latest' }}
         run: mv ~/artifacts/linux.zip ~/artifacts/build.zip
@@ -195,10 +195,12 @@ jobs:
           mkdir ~/build
           mkdir ~/tests
           unzip ~/artifacts/build.zip -d ~/build
-          unzip ~/artifacts/tests.zip -d ~/tests
           ls -l ~/build
-          ls -l ~/tests
           echo ::set-env name=PATH::"$PATH:$HOME/build"
+          unzip ~/artifacts/tests.zip -d ~/tests
+          ls -l ~/tests
+          cd ~/tests
+          npm install console.table
 
       - name: Setup Config Dir
         run: |
