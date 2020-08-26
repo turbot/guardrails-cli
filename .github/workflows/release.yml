@@ -167,11 +167,11 @@ jobs:
           name: build-artifact-darwin
           path: ~/artifacts
 
-      # - name: Download Acceptance Test Suite
-      #   uses: actions/download-artifact@v2
-      #   with:
-      #     name: test-artifact
-      #     path: ~/artifacts
+      - name: Download Acceptance Test Suite
+        uses: actions/download-artifact@v2
+        with:
+          name: test-artifact
+          path: ~/artifacts
 
       - name: Check that everything got downloaded
         run: |
