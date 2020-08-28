@@ -46,7 +46,7 @@ jobs:
 
       - name: Version collision notification
         if: ${{ contains(fromJSON(steps.released_versions.outputs.data).*.name, steps.package-version.outputs.version) }}
-        run:
+        run: |
           echo "There was a name collision with an already released versions"
           exit -1
           
