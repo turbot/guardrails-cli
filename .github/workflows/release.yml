@@ -34,15 +34,9 @@ jobs:
         with:
           node-version: 12.x
 
-      - name: Cache HIT/MISS
-        uses: actions/cache@v2
-        with:
-          path: "**/node_modules"
-          key: ${{ runner.os }}-deps-${{ hashFiles('**/package-lock.json') }}
-
       - name: Install npm packages
         run: |
-          npm install
+          npm ci
           echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
           echo ::set-env name=NODE_PATH::"$GITHUB_WORKSPACE/lib"
 
@@ -130,6 +124,7 @@ jobs:
       TURBOT_CLI_ACC_WORKSPACE: ${{ secrets.TURBOT_CLI_ACC_WORKSPACE }}
       TURBOT_CLI_ACC_REGISTRY_USER: ${{ secrets.TURBOT_CLI_ACC_REGISTRY_USER }}
       TURBOT_CLI_ACC_REGISTRY_PASS: ${{ secrets.TURBOT_CLI_ACC_REGISTRY_PASS }}
+      TURBOT_CLI_ACC_TEST_BINARY: setting_this_so_that_tests_are_run_on_the_binary
 
     steps:
       - name: Setting up Node.js 12.x
