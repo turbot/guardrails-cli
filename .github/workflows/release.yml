@@ -29,6 +29,27 @@ jobs:
           ref: master
           submodules: true
 
+      - name: Read package.json
+        uses: tyankatsu0105/read-package-version-actions@v1
+        id: package-version
+        with:
+          path: $GITHUB_WORKSPACE/lib/@turbot/cli
+
+      - name: Get already released versions
+        id: released_versions
+        uses: octokit/request-action@v2.x
+        with:
+          route: GET /repos/:repository/releases
+          repository: ${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check Release Version for later use
+        run: |
+          echo ${{ steps.released_versions.outputs.data }} > $HOME/releases.json
+          echo "Version is ${{ steps.package-version.outputs.version }}"
+          cat $HOME/releases.json | jq '.[] | .tag_name' | grep ${{ steps.package-version.outputs.version }} | wc -l | [[ $1 -gt 0 ]] && exit -1 || exit 0
+
       - name: Use Node.js 12.x
         uses: actions/setup-node@v1
         with:
@@ -47,15 +68,6 @@ jobs:
           ls $GITHUB_WORKSPACE/node_modules/.bin/nexe
           cd $GITHUB_WORKSPACE/lib/@turbot/cli
           ./compile.sh
-
-      - name: Read package.json
-        uses: tyankatsu0105/read-package-version-actions@v1
-        id: package-version
-        with:
-          path: lib/@turbot/cli
-
-      - name: Show version number
-        run: echo "Version is ${{ steps.package-version.outputs.version }}"
 
       - name: Move build artifacts
         run: |
@@ -131,10 +143,6 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 12.x
-
-      - name: Install Nunjucks CLI
-        run: |
-          npm install -g nunjucks-cli
 
       - name: Prepare for downloads
         id: prepare-for-downloads
@@ -213,26 +221,81 @@ jobs:
           $HOME/tests/run_acceptance.sh
 
   create_release:
-    name: Create Release
+    name: Release
     needs: [build, acceptance_tests]
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - name: Do Nothing
-        run: echo "Do Nothing"
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.build.outputs.version }}
+          release_name: ${{ needs.build.outputs.version }}
+          body: See https://turbot.com/v5/docs/releases/cli
+          draft: true
+          prerelease: true
 
-  upload_release_assets:
-    name: Upload Release assets
-    needs: create_release
-    runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Do Nothing
-        run: echo "Do Nothing"
+      - name: Prepare for downloads
+        run: mkdir ~/release_artifacts
+
+      - name: Download Darwin Build Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: build-artifact-darwin
+          path: ~/release_artifacts
+
+      - name: Upload Darwin Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ~/release_artifacts/darwin.zip
+          asset_name: turbot_cli_${{ needs.build.outputs.version }}_darwin_amd64.zip
+          asset_content_type: application/zip
+
+      - name: Download Linux Build Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: build-artifact-linux
+          path: ~/release_artifacts
+
+      - name: Upload Linux Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ~/release_artifacts/linux.zip
+          asset_name: turbot_cli_${{ needs.build.outputs.version }}_linux_amd64.zip
+          asset_content_type: application/zip
+
+      - name: Download Windows Build Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: build-artifact-windows
+          path: ~/release_artifacts
+
+      - name: Upload Windows Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ~/release_artifacts/windows.zip
+          asset_name: turbot_cli_${{ needs.build.outputs.version }}_windows_amd64.zip
+          asset_content_type: application/zip
 
   clean_up:
+    # let's clean up the artifacts.
+    # incase this step isn't reached,
+    # artifacts automatically expire after 90 days
+    # refer:
+    #   https://docs.github.com/en/actions/configuring-and-managing-workflows/persisting-workflow-data-using-artifacts#downloading-and-deleting-artifacts-after-a-workflow-run-is-complete
     name: Clean Up Artifacts
     needs: upload_release_assets
     runs-on: ubuntu-latest
