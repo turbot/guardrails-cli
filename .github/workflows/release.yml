@@ -113,7 +113,7 @@ jobs:
           path: ~/artifacts/linux.zip
           if-no-files-found: error
 
-      - name: Save Windows Build Artifact
+      - name: Save MacOS Build Artifact
         uses: actions/upload-artifact@v2
         with:
           name: build-artifact-darwin
@@ -251,16 +251,20 @@ jobs:
           body: See https://turbot.com/v5/docs/releases/cli
           draft: true
           prerelease: true
+        
+      - name: Export the Release Artifacts Director
+        id: home_export
+        run: echo "::set-output name=home::$HOME"
 
       - name: Prepare for downloads
-        run: mkdir ~/release_artifacts
+        run: mkdir ${{ steps.home_export.outputs.home }}/release_artifacts
 
       - name: Download Darwin Build Artifacts
         uses: actions/download-artifact@v2
         with:
           name: build-artifact-darwin
-          path: ~/release_artifacts
-      - run: ls -l ~/release_artifacts
+          path: ${{ steps.home_export.outputs.home }}/release_artifacts
+      - run: ls -l ${{ steps.home_export.outputs.home }}/release_artifacts
 
       - name: Upload Darwin Release Asset
         uses: actions/upload-release-asset@v1
@@ -268,7 +272,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ~/release_artifacts/darwin.zip
+          asset_path: ${{ steps.home_export.outputs.home }}/release_artifacts/darwin.zip
           asset_name: turbot_cli_${{ needs.build.outputs.version }}_darwin_amd64.zip
           asset_content_type: application/zip
 
@@ -276,8 +280,8 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: build-artifact-linux
-          path: ~/release_artifacts
-      - run: ls -l ~/release_artifacts
+          path: ${{ steps.home_export.outputs.home }}/release_artifacts
+      - run: ls -l ${{ steps.home_export.outputs.home }}/release_artifacts
 
       - name: Upload Linux Release Asset
         uses: actions/upload-release-asset@v1
@@ -285,7 +289,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ~/release_artifacts/linux.zip
+          asset_path: ${{ steps.home_export.outputs.home }}/release_artifacts/linux.zip
           asset_name: turbot_cli_${{ needs.build.outputs.version }}_linux_amd64.zip
           asset_content_type: application/zip
 
@@ -293,8 +297,8 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: build-artifact-windows
-          path: ~/release_artifacts
-      - run: ls -l ~/release_artifacts
+          path: ${{ steps.home_export.outputs.home }}/release_artifacts
+      - run: ls -l ${{ steps.home_export.outputs.home }}/release_artifacts
 
       - name: Upload Windows Release Asset
         uses: actions/upload-release-asset@v1
@@ -302,7 +306,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ~/release_artifacts/windows.zip
+          asset_path: ${{ steps.home_export.outputs.home }}/release_artifacts/windows.zip
           asset_name: turbot_cli_${{ needs.build.outputs.version }}_windows_amd64.zip
           asset_content_type: application/zip
 
