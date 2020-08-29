@@ -54,27 +54,18 @@ jobs:
           # exit -1
           exit 0
 
-      - name: Build cache
-        id: build_cache
-        uses: actions/cache@v2
-        with:
-          path: "${{ github.workspace }}/lib/@turbot/cli/dist/"
-          key: build-${{ hashFiles('lib/@turbot/cli') }}
-
       - name: Use Node.js 12.x
         uses: actions/setup-node@v1
         with:
           node-version: 12.x
 
       - name: Install npm packages
-        if: steps.build_cache.outputs.cache-hit != 'true'
         run: |
           npm ci
           echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
           echo ::set-env name=NODE_PATH::"$GITHUB_WORKSPACE/lib"
 
       - name: Build CLI Binaries
-        if: steps.build_cache.outputs.cache-hit != 'true'
         run: |
           echo $PATH
           echo $NODE_PATH
