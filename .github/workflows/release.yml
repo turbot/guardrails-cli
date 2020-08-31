@@ -243,11 +243,11 @@ jobs:
           draft: true
           prerelease: true
         
-      - name: Export the Release Artifacts Director
+      - name: Export the HOME directory
         id: home_export
         run: echo "::set-output name=home::$HOME"
 
-      - name: Prepare for downloads
+      - name: Prepare for Build Artifacts
         run: mkdir ${{ steps.home_export.outputs.home }}/release_artifacts
 
       - name: Download Darwin Build Artifacts
@@ -255,7 +255,18 @@ jobs:
         with:
           name: build-artifact-darwin
           path: ${{ steps.home_export.outputs.home }}/release_artifacts
-      - run: ls -l ${{ steps.home_export.outputs.home }}/release_artifacts
+
+      - name: Download Windows Build Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: build-artifact-windows
+          path: ${{ steps.home_export.outputs.home }}/release_artifacts
+
+      - name: Download Linux Build Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: build-artifact-linux
+          path: ${{ steps.home_export.outputs.home }}/release_artifacts
 
       - name: Upload Darwin Release Asset
         uses: actions/upload-release-asset@v1
@@ -267,13 +278,6 @@ jobs:
           asset_name: turbot_cli_${{ needs.build.outputs.version }}_darwin_amd64.zip
           asset_content_type: application/zip
 
-      - name: Download Linux Build Artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: build-artifact-linux
-          path: ${{ steps.home_export.outputs.home }}/release_artifacts
-      - run: ls -l ${{ steps.home_export.outputs.home }}/release_artifacts
-
       - name: Upload Linux Release Asset
         uses: actions/upload-release-asset@v1
         env:
@@ -283,13 +287,6 @@ jobs:
           asset_path: ${{ steps.home_export.outputs.home }}/release_artifacts/linux.zip
           asset_name: turbot_cli_${{ needs.build.outputs.version }}_linux_amd64.zip
           asset_content_type: application/zip
-
-      - name: Download Windows Build Artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: build-artifact-windows
-          path: ${{ steps.home_export.outputs.home }}/release_artifacts
-      - run: ls -l ${{ steps.home_export.outputs.home }}/release_artifacts
 
       - name: Upload Windows Release Asset
         uses: actions/upload-release-asset@v1
@@ -304,7 +301,7 @@ jobs:
   clean_up:
     # let's clean up the artifacts.
     # incase this step isn't reached,
-    # artifacts automatically expire after 90 days
+    # artifacts automatically expire after 90 days anyway
     # refer:
     #   https://docs.github.com/en/actions/configuring-and-managing-workflows/persisting-workflow-data-using-artifacts#downloading-and-deleting-artifacts-after-a-workflow-run-is-complete
     name: Clean Up Artifacts
@@ -334,48 +331,3 @@ jobs:
         with:
           name: test-artifact
           failOnError: true
-  #
-  #
-  #
-  #
-  #
-  #
-  #
-  # - name: Create Release
-  #   id: create_release
-  #   uses: actions/create-release@latest
-  #   env:
-  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #   with:
-  #     tag_name: ${{  steps.package-version.outputs.version }}
-  #     release_name: ${{  steps.package-version.outputs.version }}
-  #     body: See https://turbot.com/v5/docs/releases/cli
-  #     draft: false
-  #     prerelease: false
-  # - name: Upload Mac Release Asset
-  #   uses: actions/upload-release-asset@v1
-  #   env:
-  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #   with:
-  #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-  #     asset_path: dist/turbot_cli_${{ steps.package-version.outputs.version }}-beta.2_darwin_amd64.zip
-  #     asset_name: urbot_cli_${{ steps.package-version.outputs.version }}-beta.2_darwin_amd64.zip
-  #     asset_content_type: application/zip
-  # - name: Upload Linux Release Asset
-  #   uses: actions/upload-release-asset@v1
-  #   env:
-  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #   with:
-  #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-  #     asset_path: dist/turbot_cli_${{ steps.package-version.outputs.version }}-beta.2_linux_amd64.zip
-  #     asset_name: urbot_cli_${{ steps.package-version.outputs.version }}-beta.2_linux_amd64.zip
-  #     asset_content_type: application/zip
-  # - name: Upload Windows Release Asset
-  #   uses: actions/upload-release-asset@v1
-  #   env:
-  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #   with:
-  #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-  #     asset_path: dist/turbot_cli_${{ steps.package-version.outputs.version }}-beta.2_windows_amd64.zip
-  #     asset_name: urbot_cli_${{ steps.package-version.outputs.version }}-beta.2_windows_amd64.zip
-  #     asset_content_type: application/zip
