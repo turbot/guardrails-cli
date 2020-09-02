@@ -36,7 +36,7 @@ parse_args() {
 execute() {
   TMPDIR=$(mktmpdir)
   echo "$PREFIX: downloading ${TARBALL_URL}"
-  http_download "${TMPDIR}${TARBALL}" "${TARBALL_URL}"
+  http_download "${TMPDIR%/}/$TARBALL" $TARBALL_URL "" 1
   cd "${TMPDIR}"
   rm -rf turbot
   untar "${TARBALL}"
@@ -197,21 +197,30 @@ http_download() {
   header=$3
   headerflag=''
   destflag=''
-  echo  $local_file
-  echo  $source_url
-  echo  $header
-  if is_command curl; then
+  
+  # echo $local_file
+  # echo $source_url
+  # echo $header
+
+  if is_command wget; then
+    if [ $4 ]; then
+      cmd='wget -q --show-progress'
+    else
+      cmd='wget -q'
+    fi
+    destflag='-O'
+    headerflag='--header'
+  elif is_command curl; then
     cmd='curl --fail -sSL'
     destflag='-o'
     headerflag='-H'
-  elif is_command wget; then
-    cmd='wget -q'
-    destflag='-O'
-    headerflag='--header'
   else
     echo "http_download: unable to find wget or curl"
     return 1
   fi
+
+  echo ""
+
   if [ -z "$header" ]; then
     $cmd $destflag "$local_file" "$source_url"
   else
