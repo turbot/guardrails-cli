@@ -241,7 +241,7 @@ jobs:
           release_name: ${{ needs.build.outputs.version }}
           body: See https://turbot.com/v5/docs/releases/cli
           draft: true
-          prerelease: true
+          prerelease: false
         
       - name: Export the HOME directory
         id: home_export
