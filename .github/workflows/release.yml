@@ -209,7 +209,6 @@ jobs:
           unzip ~/artifacts/tests.zip -d ~/tests
           ls -l ~/tests
           echo "PATH=$PATH:$HOME/build:$HOME/tests/acceptance/bats_tests/libs/bats/libexec" >> $GITHUB_ENV
-#          echo ::set-env name=PATH::"$PATH:$HOME/build:$HOME/tests/acceptance/bats_tests/libs/bats/libexec"
           cd ~/tests
           npm install console.table
           npm install js-yaml
