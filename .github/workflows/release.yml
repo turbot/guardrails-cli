@@ -221,11 +221,11 @@ jobs:
           touch $HOME/.config/turbot/credentials.yml
           touch $HOME/.config/turbot/registry.yml
 
-      - name: Run Tests
-        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
-        run: |
-          chmod +x $HOME/tests/run_acceptance.sh
-          $HOME/tests/run_acceptance.sh
+#      - name: Run Tests
+#        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
+#        run: |
+#          chmod +x $HOME/tests/run_acceptance.sh
+#          $HOME/tests/run_acceptance.sh
 
   create_release:
     name: Release
