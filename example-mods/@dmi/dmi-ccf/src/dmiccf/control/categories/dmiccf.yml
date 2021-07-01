@@ -1,0 +1,41 @@
+# This file contains control category definitions
+#
+# As other mod objects, Control Categories works in hierarchy. Each category linked to a parent category.
+# The default parent category is Turbot, which is the highest level.
+# Hierarchy offers a good visualization and navigation through control categories
+# Please refer to https://turbot.com/v5/docs/concepts/controls#control-categories for details
+
+# Hierarchy level: Dunder Mifflin
+dmiccf:
+  title: Dunder Mifflin
+  icon: fal-shield
+
+# Hierarchy level: Dunder Mifflin > Authentication & Access Control
+dmiccfAac:
+  title: 1. Authentication & Access Control
+  icon: fal-shield
+  parent: "#/control/categories/dmiccf"
+
+# Hierarchy level: Dunder Mifflin > Data Security & Encryption
+dmiccfData:
+  title: 2. Data Security & Encryption
+  icon: fal-shield
+  parent: "#/control/categories/dmiccf"
+
+# Hierarchy level: Dunder Mifflin > Network Security
+dmiccfNet:
+  title: 3. Network Security
+  icon: fal-shield
+  parent: "#/control/categories/dmiccf"
+
+# Hierarchy level: Dunder Mifflin > Logging & Auditing
+dmiccfAud:
+  title: 4. Logging & Auditing
+  icon: fal-shield
+  parent: "#/control/categories/dmiccf"
+
+# Hierarchy level: Dunder Mifflin > Data Protection & Business Continuity
+dmiccfDpc:
+  title: 5. Data Protection & Business Continuity
+  icon: fal-shield
+  parent: "#/control/categories/dmiccf"

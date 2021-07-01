@@ -1,0 +1,16 @@
+awsS3002:
+  title: AWS.S3.002 - Enable Versioning on S3 Buckets
+  icon: fal-shield-check
+  parent: "#/policy/types/dmiccfAwsS3"
+  category: "dmi-ccf#/control/categories/dmiccfData"
+  targets:
+    - "tmod:@turbot/aws-s3#/resource/types/bucket"
+  description: |
+    Check if bucket version is enabled
+  schema:
+    type: string
+    enum:
+      - Skip
+      - Check
+      - Per Dunder Mifflin > AWS
+    default: Per Dunder Mifflin > AWS
