@@ -1,0 +1,5 @@
+dmiccfAwsVpc:
+  title: VPC
+  icon: fal-shield-check
+  parent: "#/control/types/dmiccfAws"
+  category: "dmi-ccf#/control/categories/dmiccfNet"

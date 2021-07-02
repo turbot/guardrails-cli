@@ -1,0 +1,5 @@
+dmiccfAwsRds:
+  title: RDS
+  icon: fal-shield-check
+  parent: "#/policy/types/dmiccfAws"
+  category: "dmi-ccf#/control/categories/dmiccfDpc"
