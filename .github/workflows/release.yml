@@ -34,7 +34,7 @@ jobs:
         id: package-version
         with:
           path: ${{ github.workspace }}/lib/@turbot/cli
-          
+
       - name: Release Version
         run: echo "Version is ${{ steps.package-version.outputs.version }}"
 
@@ -60,13 +60,15 @@ jobs:
           node-version: 12.x
 
       - name: Install npm packages
+        env:
+          FONTAWESOME_NPM_AUTH_TOKEN: ${{ secrets.FONTAWESOME_NPM_AUTH_TOKEN }}
         run: |
           npm install
           echo "PATH=$PATH:$(pwd)/node_modules/.bin" >> $GITHUB_ENV
           echo "NODE_PATH=$GITHUB_WORKSPACE/lib" >> $GITHUB_ENV
 
-#          echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
-#          echo ::set-env name=NODE_PATH::"$GITHUB_WORKSPACE/lib"
+      #          echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
+      #          echo ::set-env name=NODE_PATH::"$GITHUB_WORKSPACE/lib"
 
       - name: Build CLI Binaries
         run: |
@@ -221,11 +223,11 @@ jobs:
           touch $HOME/.config/turbot/credentials.yml
           touch $HOME/.config/turbot/registry.yml
 
-#      - name: Run Tests
-#        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
-#        run: |
-#          chmod +x $HOME/tests/run_acceptance.sh
-#          $HOME/tests/run_acceptance.sh
+  #      - name: Run Tests
+  #        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
+  #        run: |
+  #          chmod +x $HOME/tests/run_acceptance.sh
+  #          $HOME/tests/run_acceptance.sh
 
   create_release:
     name: Release
@@ -245,7 +247,7 @@ jobs:
           body: See https://turbot.com/v5/docs/releases/cli
           draft: true
           prerelease: false
-        
+
       - name: Export the HOME directory
         id: home_export
         run: echo "::set-output name=home::$HOME"
