@@ -54,10 +54,10 @@ jobs:
           # exit -1
           exit 0
 
-      - name: Use Node.js 12.x
-        uses: actions/setup-node@v1
+      - name: Use Node.js 14
+        uses: actions/setup-node@v3
         with:
-          node-version: 12.x
+          node-version: 14
 
       - name: Reconfigure git to use HTTPS authentication
         run: >
@@ -153,10 +153,10 @@ jobs:
       TURBOT_CLI_ACC_TEST_BINARY: setting_this_so_that_tests_are_run_on_the_binary
 
     steps:
-      - name: Setting up Node.js 12.x
-        uses: actions/setup-node@v1
+      - name: Setting up Node.js 14
+        uses: actions/setup-node@v3
         with:
-          node-version: 12.x
+          node-version: 14
 
       - name: Reconfigure git to use HTTPS authentication
         run: >
