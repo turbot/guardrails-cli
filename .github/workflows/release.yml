@@ -72,8 +72,8 @@ jobs:
           echo "PATH=$PATH:$(pwd)/node_modules/.bin" >> $GITHUB_ENV
           echo "NODE_PATH=$GITHUB_WORKSPACE/lib" >> $GITHUB_ENV
 
-      #         echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
-      #         echo ::set-env name=NODE_PATH::"$GITHUB_WORKSPACE/lib"
+      #        echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
+      #        echo ::set-env name=NODE_PATH::"$GITHUB_WORKSPACE/lib"
 
       - name: Build CLI Binaries
         run: |
