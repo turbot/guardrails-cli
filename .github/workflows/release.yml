@@ -59,10 +59,10 @@ jobs:
         with:
           node-version: 14
 
-      - name: Reconfigure git to use HTTPS authentication
-        run: >
-          git config --global url."https://github.com/".insteadOf
-          ssh://git@github.com/
+      # - name: Reconfigure git to use HTTPS authentication
+      #   run: >
+      #     git config --global url."https://github.com/".insteadOf
+      #     ssh://git@github.com/
 
       - name: Install npm packages
         env:
@@ -158,10 +158,10 @@ jobs:
         with:
           node-version: 14
 
-      - name: Reconfigure git to use HTTPS authentication
-        run: >
-          git config --global url."https://github.com/".insteadOf
-          ssh://git@github.com/
+      # - name: Reconfigure git to use HTTPS authentication
+      #   run: >
+      #     git config --global url."https://github.com/".insteadOf
+      #     ssh://git@github.com/
 
       - name: Prepare for downloads
         id: prepare-for-downloads
