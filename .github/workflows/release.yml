@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@master
         with:
           repository: turbotio/turbot-core
-          token: ${{ secrets.turbot_core_pac }}
+          token: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
           ref: master
           submodules: true
 
