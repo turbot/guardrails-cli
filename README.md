@@ -12,7 +12,7 @@ create mods.
 
 ## Download & Install
 
-1. Download latest version from [here].(https://turbot.com/guardrails/docs/releases/cli#downloads)
+1. Download latest version from [here](https://turbot.com/guardrails/docs/releases/cli#downloads).
 2. Install per https://turbot.com/guardrails/docs/reference/cli/installation
 
 ## License & Terms
