@@ -169,28 +169,28 @@ jobs:
           mkdir ~/artifacts
 
       # - name: Download Windows Build Artifacts
-      #   uses: actions/download-artifact@v2
+      #   uses: actions/download-artifact@v4.1.7
       #   if: ${{ matrix.platform == 'windows-latest' }}
       #   with:
       #     name: build-artifact-windows
       #     path: ~/artifacts
 
       - name: Download Linux Build Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         if: ${{ matrix.platform == 'ubuntu-latest' }}
         with:
           name: build-artifact-linux
           path: ~/artifacts
 
       - name: Download Darwin Build Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         if: ${{ matrix.platform == 'macos-latest' }}
         with:
           name: build-artifact-darwin
           path: ~/artifacts
 
       - name: Download Acceptance Test Suite
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: test-artifact
           path: ~/artifacts
@@ -266,19 +266,19 @@ jobs:
         run: mkdir ${{ steps.home_export.outputs.home }}/release_artifacts
 
       - name: Download Darwin Build Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: build-artifact-darwin
           path: ${{ steps.home_export.outputs.home }}/release_artifacts
 
       - name: Download Windows Build Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: build-artifact-windows
           path: ${{ steps.home_export.outputs.home }}/release_artifacts
 
       - name: Download Linux Build Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: build-artifact-linux
           path: ${{ steps.home_export.outputs.home }}/release_artifacts
