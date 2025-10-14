@@ -1,11 +1,13 @@
 name: CLI Automated Release
 on:
-  push:
-  # workflow_dispatch:
-  #   inputs:
-  #     releaseVersion:
-  #       description: "The version number of the new release"
-  #       required: true
+  workflow_dispatch:
+    inputs:
+      releaseVersion:
+        description: "The version number of the new release"
+        required: true
+      branchName:
+        description: "The branch name from turbot-core repo"
+        required: true
 jobs:
   build:
     name: Build
@@ -26,7 +28,7 @@ jobs:
         with:
           repository: turbotio/turbot-core
           ssh-key: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
-          ref: master
+          ref: ${{ github.event.inputs.branchName }}
           submodules: true
 
       - name: Read package.json
@@ -37,6 +39,14 @@ jobs:
 
       - name: Release Version
         run: echo "Version is ${{ steps.package-version.outputs.version }}"
+
+      - name: Validate version match
+        run: |
+          if [ "${{ github.event.inputs.releaseVersion }}" != "${{ steps.package-version.outputs.version }}" ]; then
+            echo "ERROR: Input version '${{ github.event.inputs.releaseVersion }}' does not match package.json version '${{ steps.package-version.outputs.version }}'"
+            exit 1
+          fi
+          echo "Version validation passed: ${{ steps.package-version.outputs.version }}"
 
       - name: Get already released versions
         id: released_versions
