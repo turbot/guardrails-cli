@@ -54,7 +54,6 @@ jobs:
             artifact_name: build-artifact-darwin
             artifact_basename: darwin.zip
             release_suffix: darwin_amd64
-            shell: bash
           - name: Linux
             runner: ubuntu-latest
             target_os: linux
@@ -62,7 +61,6 @@ jobs:
             artifact_name: build-artifact-linux
             artifact_basename: linux.zip
             release_suffix: linux_amd64
-            shell: bash
           - name: Windows
             runner: windows-latest
             target_os: windows
@@ -70,7 +68,6 @@ jobs:
             artifact_name: build-artifact-windows
             artifact_basename: windows.zip
             release_suffix: windows_amd64
-            shell: bash
     steps:
       - name: Configure git line endings
         shell: bash
@@ -128,18 +125,18 @@ jobs:
       - name: Install dependencies
         env:
           FONTAWESOME_NPM_AUTH_TOKEN: ${{ secrets.FONTAWESOME_NPM_AUTH_TOKEN }}
-        shell: ${{ matrix.shell }}
+        shell: bash
         run: |
           npm install --omit=optional
           echo "PATH=$PATH:$(pwd)/node_modules/.bin" >> $GITHUB_ENV
           echo "NODE_PATH=$GITHUB_WORKSPACE/lib" >> $GITHUB_ENV
 
       - name: Install caxa
-        shell: ${{ matrix.shell }}
+        shell: bash
         run: npm install --global caxa
 
       - name: Build CLI binary with caxa
-        shell: ${{ matrix.shell }}
+        shell: bash
         working-directory: lib/@turbot/cli
         env:
           TARGET_OS: ${{ matrix.target_os }}
@@ -150,7 +147,7 @@ jobs:
           ./compile-caxa.sh
 
       - name: Collect build artifacts
-        shell: ${{ matrix.shell }}
+        shell: bash
         env:
           VERSION: ${{ github.event.inputs.releaseVersion }}
         run: |
