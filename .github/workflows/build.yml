@@ -1,4 +1,4 @@
-name: CLI Automated Release
+name: Release CLI
 
 on:
   workflow_dispatch:
