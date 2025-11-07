@@ -11,41 +11,66 @@ on:
         required: true
 
 jobs:
+  prepare_tests:
+    name: Package Acceptance Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout turbot-core
+        uses: actions/checkout@v4
+        with:
+          repository: turbotio/turbot-core
+          ssh-key: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
+          ref: ${{ github.event.inputs.branchName }}
+          submodules: true
+
+      - name: Create tests archive
+        shell: bash
+        run: |
+          mkdir -p "$HOME/artifacts"
+          cd lib/@turbot/cli
+          zip -qr "$HOME/artifacts/tests.zip" test
+
+      - name: Upload acceptance test suite
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-artifact
+          path: ${{ runner.home }}/artifacts/tests.zip
+          if-no-files-found: error
+
   build:
     name: Build ${{ matrix.name }} binary
+    runs-on: ${{ matrix.runner }}
+    needs: prepare_tests
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: macOS
             runner: macos-latest
-            artifact: build-artifact-darwin
-            zip_name: turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_amd64.zip
-            binary_zip: turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_amd64.zip
-            binary_path: turbot-macos
-            artifact_source: darwin.zip
+            target_os: macos
+            archive_format: zip
+            artifact_name: build-artifact-darwin
+            artifact_basename: darwin.zip
+            release_suffix: darwin_amd64
             shell: bash
           - name: Linux
             runner: ubuntu-latest
-            artifact: build-artifact-linux
-            zip_name: turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip
-            binary_zip: turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip
-            binary_path: turbot-linux
-            artifact_source: linux.zip
+            target_os: linux
+            archive_format: zip
+            artifact_name: build-artifact-linux
+            artifact_basename: linux.zip
+            release_suffix: linux_amd64
             shell: bash
           - name: Windows
             runner: windows-latest
-            artifact: build-artifact-windows
-            zip_name: turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip
-            binary_zip: turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip
-            binary_path: turbot-win.exe
-            artifact_source: windows.zip
+            target_os: windows
+            archive_format: zip
+            artifact_name: build-artifact-windows
+            artifact_basename: windows.zip
+            release_suffix: windows_amd64
             shell: bash
-
-    runs-on: ${{ matrix.runner }}
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     steps:
       - name: Configure git line endings
         shell: bash
@@ -92,7 +117,7 @@ jobs:
           exit 0
 
       - name: Setup Node.js 22
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: 22
 
@@ -105,27 +130,39 @@ jobs:
           FONTAWESOME_NPM_AUTH_TOKEN: ${{ secrets.FONTAWESOME_NPM_AUTH_TOKEN }}
         shell: ${{ matrix.shell }}
         run: |
-          npm install --no-optional
+          npm install --omit=optional
           echo "PATH=$PATH:$(pwd)/node_modules/.bin" >> $GITHUB_ENV
           echo "NODE_PATH=$GITHUB_WORKSPACE/lib" >> $GITHUB_ENV
 
+      - name: Install caxa
+        shell: ${{ matrix.shell }}
+        run: npm install --global caxa
+
       - name: Build CLI binary with caxa
         shell: ${{ matrix.shell }}
+        working-directory: lib/@turbot/cli
+        env:
+          TARGET_OS: ${{ matrix.target_os }}
+          TARGET_ARCH: amd64
+          TARGET_ARCHIVE_FORMAT: ${{ matrix.archive_format }}
         run: |
-          cd $GITHUB_WORKSPACE/lib/@turbot/cli
+          chmod +x compile-caxa.sh
           ./compile-caxa.sh
 
       - name: Collect build artifacts
         shell: ${{ matrix.shell }}
+        env:
+          VERSION: ${{ github.event.inputs.releaseVersion }}
         run: |
-          mkdir -p ~/artifacts
-          cp "$GITHUB_WORKSPACE/lib/@turbot/cli/dist/${{ matrix.binary_zip }}" "~/artifacts/${{ matrix.artifact_source }}"
+          mkdir -p "$HOME/artifacts"
+          ARCHIVE_NAME="turbot_cli_${VERSION}_${{ matrix.release_suffix }}.zip"
+          cp "$GITHUB_WORKSPACE/lib/@turbot/cli/dist/$ARCHIVE_NAME" "$HOME/artifacts/${{ matrix.artifact_basename }}"
 
       - name: Upload ${{ matrix.name }} build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: ~/artifacts/${{ matrix.artifact_source }}
+          name: ${{ matrix.artifact_name }}
+          path: ${{ runner.home }}/artifacts/${{ matrix.artifact_basename }}
           if-no-files-found: error
 
     outputs:
@@ -133,7 +170,7 @@ jobs:
 
   acceptance_tests:
     name: Acceptance Tests on ${{ matrix.platform }}
-    needs: build
+    needs: [build, prepare_tests]
     strategy:
       matrix:
         platform: [ubuntu-latest, macos-latest]
@@ -148,7 +185,6 @@ jobs:
       TURBOT_CLI_ACC_REGISTRY_USER: ${{ secrets.TURBOT_CLI_ACC_REGISTRY_USER }}
       TURBOT_CLI_ACC_REGISTRY_PASS: ${{ secrets.TURBOT_CLI_ACC_REGISTRY_PASS }}
       TURBOT_CLI_ACC_TEST_BINARY: setting_this_so_that_tests_are_run_on_the_binary
-
     steps:
       - name: Setup Node.js 16
         uses: actions/setup-node@v3
@@ -160,45 +196,45 @@ jobs:
 
       - name: Prepare artifact directory
         shell: bash
-        run: mkdir -p ~/artifacts
+        run: mkdir -p $HOME/artifacts
 
       - name: Download Linux build artifact
         if: ${{ matrix.platform == 'ubuntu-latest' }}
         uses: actions/download-artifact@v4
         with:
           name: build-artifact-linux
-          path: ~/artifacts
+          path: $HOME/artifacts
 
       - name: Download macOS build artifact
         if: ${{ matrix.platform == 'macos-latest' }}
         uses: actions/download-artifact@v4
         with:
           name: build-artifact-darwin
-          path: ~/artifacts
+          path: $HOME/artifacts
 
       - name: Download acceptance test suite
         uses: actions/download-artifact@v4
         with:
           name: test-artifact
-          path: ~/artifacts
+          path: $HOME/artifacts
 
-      - name: Rename build zip for tests
+      - name: Rename build archive for tests
         shell: bash
         run: |
           if [[ "${{ matrix.platform }}" == "ubuntu-latest" ]]; then
-            mv ~/artifacts/linux.zip ~/artifacts/build.zip
+            mv $HOME/artifacts/linux.zip $HOME/artifacts/build.zip
           else
-            mv ~/artifacts/darwin.zip ~/artifacts/build.zip
+            mv $HOME/artifacts/darwin.zip $HOME/artifacts/build.zip
           fi
 
       - name: Extract artifacts
         shell: bash
         run: |
-          mkdir -p ~/build ~/tests
-          unzip -q ~/artifacts/build.zip -d ~/build
-          unzip -q ~/artifacts/tests.zip -d ~/tests
+          mkdir -p $HOME/build $HOME/tests
+          unzip -q $HOME/artifacts/build.zip -d $HOME/build
+          unzip -q $HOME/artifacts/tests.zip -d $HOME/tests
           echo "PATH=$PATH:$HOME/build:$HOME/tests/acceptance/bats_tests/libs/bats/libexec" >> $GITHUB_ENV
-          cd ~/tests
+          cd $HOME/tests
           npm install console.table js-yaml
 
       - name: Setup config directory
@@ -222,7 +258,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     steps:
       - name: Create draft release
         id: create_release
