@@ -14,6 +14,8 @@ jobs:
   prepare_tests:
     name: Package Acceptance Tests
     runs-on: ubuntu-latest
+    env:
+      ARTIFACT_DIR: ${{ runner.temp }}/release-cli-tests
     steps:
       - name: Checkout turbot-core
         uses: actions/checkout@v4
@@ -26,15 +28,15 @@ jobs:
       - name: Create tests archive
         shell: bash
         run: |
-          mkdir -p "$HOME/artifacts"
+          mkdir -p "$ARTIFACT_DIR"
           cd lib/@turbot/cli
-          zip -qr "$HOME/artifacts/tests.zip" test
+          zip -qr "$ARTIFACT_DIR/tests.zip" test
 
       - name: Upload acceptance test suite
         uses: actions/upload-artifact@v4
         with:
           name: test-artifact
-          path: ${{ runner.home }}/artifacts/tests.zip
+          path: ${{ env.ARTIFACT_DIR }}/tests.zip
           if-no-files-found: error
 
   build:
@@ -43,6 +45,7 @@ jobs:
     needs: prepare_tests
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ARTIFACT_DIR: ${{ runner.temp }}/release-cli-${{ matrix.target_os }}
     strategy:
       fail-fast: false
       matrix:
@@ -151,15 +154,15 @@ jobs:
         env:
           VERSION: ${{ github.event.inputs.releaseVersion }}
         run: |
-          mkdir -p "$HOME/artifacts"
+          mkdir -p "$ARTIFACT_DIR"
           ARCHIVE_NAME="turbot_cli_${VERSION}_${{ matrix.release_suffix }}.zip"
-          cp "$GITHUB_WORKSPACE/lib/@turbot/cli/dist/$ARCHIVE_NAME" "$HOME/artifacts/${{ matrix.artifact_basename }}"
+          cp "$GITHUB_WORKSPACE/lib/@turbot/cli/dist/$ARCHIVE_NAME" "$ARTIFACT_DIR/${{ matrix.artifact_basename }}"
 
       - name: Upload ${{ matrix.name }} build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: ${{ runner.home }}/artifacts/${{ matrix.artifact_basename }}
+          path: ${{ env.ARTIFACT_DIR }}/{{ matrix.artifact_basename }}
           if-no-files-found: error
 
     outputs:
@@ -175,6 +178,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TURBOT_CLI_ACC_PROFILE: acceptance_test_profile
+      ARTIFACT_DIR: ${{ runner.temp }}/release-cli-acceptance
       TURBOT_CLI_ACC_REGISTRY: turbot-stg.com
       TURBOT_CLI_ACC_ACCESS_KEY: ${{ secrets.TURBOT_CLI_ACC_ACCESS_KEY }}
       TURBOT_CLI_ACC_SECRET_KEY: ${{ secrets.TURBOT_CLI_ACC_SECRET_KEY }}
@@ -193,45 +197,47 @@ jobs:
 
       - name: Prepare artifact directory
         shell: bash
-        run: mkdir -p $HOME/artifacts
+        run: mkdir -p "$ARTIFACT_DIR"
 
       - name: Download Linux build artifact
         if: ${{ matrix.platform == 'ubuntu-latest' }}
         uses: actions/download-artifact@v4
         with:
           name: build-artifact-linux
-          path: $HOME/artifacts
+          path: ${{ env.ARTIFACT_DIR }}
 
       - name: Download macOS build artifact
         if: ${{ matrix.platform == 'macos-latest' }}
         uses: actions/download-artifact@v4
         with:
           name: build-artifact-darwin
-          path: $HOME/artifacts
+          path: ${{ env.ARTIFACT_DIR }}
 
       - name: Download acceptance test suite
         uses: actions/download-artifact@v4
         with:
           name: test-artifact
-          path: $HOME/artifacts
+          path: ${{ env.ARTIFACT_DIR }}
 
       - name: Rename build archive for tests
         shell: bash
         run: |
           if [[ "${{ matrix.platform }}" == "ubuntu-latest" ]]; then
-            mv $HOME/artifacts/linux.zip $HOME/artifacts/build.zip
+            mv "$ARTIFACT_DIR/linux.zip" "$ARTIFACT_DIR/build.zip"
           else
-            mv $HOME/artifacts/darwin.zip $HOME/artifacts/build.zip
+            mv "$ARTIFACT_DIR/darwin.zip" "$ARTIFACT_DIR/build.zip"
           fi
 
       - name: Extract artifacts
         shell: bash
         run: |
-          mkdir -p $HOME/build $HOME/tests
-          unzip -q $HOME/artifacts/build.zip -d $HOME/build
-          unzip -q $HOME/artifacts/tests.zip -d $HOME/tests
-          echo "PATH=$PATH:$HOME/build:$HOME/tests/acceptance/bats_tests/libs/bats/libexec" >> $GITHUB_ENV
-          cd $HOME/tests
+          BUILD_DIR="$ARTIFACT_DIR/build"
+          TESTS_DIR="$ARTIFACT_DIR/tests"
+          mkdir -p "$BUILD_DIR" "$TESTS_DIR"
+          unzip -q "$ARTIFACT_DIR/build.zip" -d "$BUILD_DIR"
+          unzip -q "$ARTIFACT_DIR/tests.zip" -d "$TESTS_DIR"
+          echo "PATH=$PATH:$BUILD_DIR:$TESTS_DIR/acceptance/bats_tests/libs/bats/libexec" >> $GITHUB_ENV
+          cd "$TESTS_DIR"
           npm install console.table js-yaml
 
       - name: Setup config directory
@@ -255,6 +261,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ARTIFACT_DIR: ${{ runner.temp }}/release-cli-final
     steps:
       - name: Create draft release
         id: create_release
@@ -269,25 +276,25 @@ jobs:
           prerelease: false
 
       - name: Prepare artifact staging
-        run: mkdir -p $HOME/release_artifacts
+        run: mkdir -p "$ARTIFACT_DIR"
 
       - name: Download macOS artifact
         uses: actions/download-artifact@v4
         with:
           name: build-artifact-darwin
-          path: $HOME/release_artifacts
+          path: ${{ env.ARTIFACT_DIR }}
 
       - name: Download Linux artifact
         uses: actions/download-artifact@v4
         with:
           name: build-artifact-linux
-          path: $HOME/release_artifacts
+          path: ${{ env.ARTIFACT_DIR }}
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
           name: build-artifact-windows
-          path: $HOME/release_artifacts
+          path: ${{ env.ARTIFACT_DIR }}
 
       - name: Upload macOS release asset
         uses: actions/upload-release-asset@v1
@@ -295,7 +302,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: $HOME/release_artifacts/darwin.zip
+          asset_path: ${{ env.ARTIFACT_DIR }}/darwin.zip
           asset_name: turbot_cli_${{ needs.build.outputs.version }}_darwin_amd64.zip
           asset_content_type: application/zip
 
@@ -305,7 +312,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: $HOME/release_artifacts/linux.zip
+          asset_path: ${{ env.ARTIFACT_DIR }}/linux.zip
           asset_name: turbot_cli_${{ needs.build.outputs.version }}_linux_amd64.zip
           asset_content_type: application/zip
 
@@ -315,7 +322,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: $HOME/release_artifacts/windows.zip
+          asset_path: ${{ env.ARTIFACT_DIR }}/windows.zip
           asset_name: turbot_cli_${{ needs.build.outputs.version }}_windows_amd64.zip
           asset_content_type: application/zip
 
