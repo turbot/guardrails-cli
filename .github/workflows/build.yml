@@ -28,17 +28,12 @@ jobs:
 
       - name: Checkout turbot-core (Windows)
         if: ${{ matrix.target_os == 'windows' }}
-        uses: actions/checkout@v4
-        with:
-          repository: turbotio/turbot-core
-          ssh-key: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
-          ref: ${{ github.event.inputs.branchName }}
-          submodules: true
-          sparse-checkout: |
-            *
-            !lib/@turbot/tacl/
-            !lib/@turbot/tacl/**
-          sparse-checkout-cone: false
+        run: |
+          git config --global core.protectNTFS false
+          git clone --depth=1 --branch "${{ github.event.inputs.branchName }}" git@github.com:turbotio/turbot-core.git repo-tmp
+          mkdir repo
+          robocopy repo-tmp repo /E /NFL /NDL /NJH /NJS /NC /NS /XF "lib/@turbot/tacl/old_test/approved > regions [check field against a list].js" | cmd /c exit /b 0
+          rd /s /q repo-tmp
 
       - name: Create tests archive
         shell: bash
