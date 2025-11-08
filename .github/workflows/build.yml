@@ -15,7 +15,7 @@ jobs:
     name: Package Acceptance Tests
     runs-on: ubuntu-latest
     env:
-      ARTIFACT_DIR: ${{ runner.temp }}/release-cli-tests
+      ARTIFACT_DIR: ${{ github.workspace }}/.release-cli/tests
     steps:
       - name: Checkout turbot-core
         uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
     needs: prepare_tests
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ARTIFACT_DIR: ${{ runner.temp }}/release-cli-${{ matrix.target_os }}
+      ARTIFACT_DIR: ${{ github.workspace }}/.release-cli/build/${{ matrix.target_os }}
     strategy:
       fail-fast: false
       matrix:
@@ -178,7 +178,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TURBOT_CLI_ACC_PROFILE: acceptance_test_profile
-      ARTIFACT_DIR: ${{ runner.temp }}/release-cli-acceptance
+      ARTIFACT_DIR: ${{ github.workspace }}/.release-cli/acceptance
       TURBOT_CLI_ACC_REGISTRY: turbot-stg.com
       TURBOT_CLI_ACC_ACCESS_KEY: ${{ secrets.TURBOT_CLI_ACC_ACCESS_KEY }}
       TURBOT_CLI_ACC_SECRET_KEY: ${{ secrets.TURBOT_CLI_ACC_SECRET_KEY }}
@@ -261,7 +261,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ARTIFACT_DIR: ${{ runner.temp }}/release-cli-final
+      ARTIFACT_DIR: ${{ github.workspace }}/.release-cli/final
     steps:
       - name: Create draft release
         id: create_release
