@@ -60,20 +60,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: macOS
-            runner: macos-latest
-            target_os: macos
-            archive_format: zip
-            artifact_name: build-artifact-darwin
-            artifact_basename: darwin.zip
-            release_suffix: darwin_amd64
-          - name: Linux
-            runner: ubuntu-latest
-            target_os: linux
-            archive_format: zip
-            artifact_name: build-artifact-linux
-            artifact_basename: linux.zip
-            release_suffix: linux_amd64
+          # - name: macOS
+          #   runner: macos-latest
+          #   target_os: macos
+          #   archive_format: zip
+          #   artifact_name: build-artifact-darwin
+          #   artifact_basename: darwin.zip
+          #   release_suffix: darwin_amd64
+          # - name: Linux
+          #   runner: ubuntu-latest
+          #   target_os: linux
+          #   archive_format: zip
+          #   artifact_name: build-artifact-linux
+          #   artifact_basename: linux.zip
+          #   release_suffix: linux_amd64
           - name: Windows
             runner: windows-latest
             target_os: windows
