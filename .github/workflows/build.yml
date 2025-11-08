@@ -36,7 +36,7 @@ jobs:
           submodules: true
           sparse-checkout: |
             /*
-            !/lib/@turbot/tacl/old_test/**
+            !/lib/@turbot/tacl/**
           sparse-checkout-cone: false
 
       - name: Create tests archive
