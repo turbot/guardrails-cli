@@ -32,11 +32,12 @@ jobs:
         run: |
           git config --global core.protectNTFS false
           $branch = "${{ github.event.inputs.branchName }}"
-          git clone --depth=1 --branch $branch git@github.com:turbotio/turbot-core.git repo-tmp
-          Get-ChildItem -Force | Where-Object { $_.Name -ne 'repo-tmp' } | ForEach-Object { Remove-Item -Recurse -Force $_ }
-          $excludeDir = "lib\@turbot\tacl\old_test"
-          cmd /c "robocopy repo-tmp . /MIR /NFL /NDL /NJH /NJS /NC /NS /XD ""$excludeDir"" || exit /b 0"
-          Remove-Item -Recurse -Force repo-tmp
+          Get-ChildItem -Force | Where-Object { $_.Name -notin @('.','..') } | ForEach-Object { Remove-Item -Recurse -Force $_ }
+          git clone --no-checkout --depth=1 --filter=blob:none --single-branch --branch $branch git@github.com:turbotio/turbot-core.git .
+          git sparse-checkout init --no-cone
+          git sparse-checkout set --skip-checks "/*" "!lib/@turbot/tacl/old_test/**"
+          git checkout $branch
+          git submodule update --init --recursive
 
       - name: Create tests archive
         shell: bash
