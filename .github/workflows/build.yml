@@ -1,13 +1,13 @@
-name: Release CLI
+name: Build CLI Binaries
 
 on:
   workflow_dispatch:
     inputs:
       releaseVersion:
-        description: "Release version"
+        description: "The version number of the new release"
         required: true
       branchName:
-        description: "turbot-core branch"
+        description: "The branch name from turbot-core repo"
         required: true
 
 jobs:
@@ -20,36 +20,48 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             binary_name: turbot-linux
-            archive_name: turbot_cli_${PACKAGE_VERSION}_linux_amd64.tar.gz
+            archive_name: turbot_cli_linux_amd64.tar.gz
           - os: windows-latest
             platform: windows
             binary_name: turbot-windows.exe
-            archive_name: turbot_cli_${PACKAGE_VERSION}_windows_amd64.zip
+            archive_name: turbot_cli_windows_amd64.zip
           - os: macos-latest
             platform: macos
             binary_name: turbot-macos
-            archive_name: turbot_cli_${PACKAGE_VERSION}_darwin_amd64.zip
+            archive_name: turbot_cli_darwin_amd64.zip
 
     steps:
-      - name: Checkout code
+      - name: Determine branch and version
+        id: inputs
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "branch=${{ github.event.inputs.branchName }}" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.inputs.releaseVersion }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "branch=main" >> $GITHUB_OUTPUT
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          else
+            echo "branch=main" >> $GITHUB_OUTPUT
+            echo "version=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout turbot-core repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           repository: turbotio/turbot-core
-          ssh-key: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
-          ref: ${{ github.event.inputs.branchName }}
+          ref: ${{ steps.inputs.outputs.branch }}
+          token: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
 
-      - name: Install dependencies
-        run: |
-          pwd
-          npm i --no-optional
-        working-directory: .
+      - name: Install dependencies in monorepo root
+        run: npm ci
 
       - name: Install caxa
         run: npm install -g caxa
@@ -60,7 +72,7 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+        working-directory: lib/@turbot/cli
 
       - name: Create staging directory
         shell: bash
@@ -69,7 +81,7 @@ jobs:
           rm -rf "$STAGING_DIR"
           mkdir -p "$STAGING_DIR"
           echo "STAGING_DIR=$STAGING_DIR" >> $GITHUB_ENV
-        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+        working-directory: lib/@turbot/cli
 
       - name: Copy application files
         shell: bash
@@ -81,7 +93,7 @@ jobs:
           cp -r docs "$STAGING_DIR/" 2>/dev/null || true
           cp .turbotIgnore "$STAGING_DIR/" 2>/dev/null || true
           cp package.json "$STAGING_DIR/"
-        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+        working-directory: lib/@turbot/cli
 
       - name: Copy node_modules (Unix)
         if: runner.os != 'Windows'
@@ -102,7 +114,7 @@ jobs:
             find "$STAGING_DIR/node_modules" -type d \( -name test -o -name tests -o -name __tests__ -o -name docs -o -name examples \) -prune -exec rm -rf {} +
             find "$STAGING_DIR/node_modules" -type f -name '*.md' -delete
           fi
-        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+        working-directory: lib/@turbot/cli
 
       - name: Copy node_modules (Windows)
         if: runner.os == 'Windows'
@@ -111,7 +123,7 @@ jobs:
           Copy-Item -Path "../../../node_modules" -Destination "$env:STAGING_DIR/" -Recurse -Force
           Get-ChildItem -Path "$env:STAGING_DIR/node_modules" -Include test,tests,__tests__,docs,examples -Recurse -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
           Get-ChildItem -Path "$env:STAGING_DIR/node_modules" -Filter "*.md" -Recurse -File | Remove-Item -Force -ErrorAction SilentlyContinue
-        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+        working-directory: lib/@turbot/cli
 
       - name: Remove unused optional modules
         shell: bash
@@ -127,14 +139,14 @@ jobs:
             "$STAGING_DIR/node_modules/tedious" \
             "$STAGING_DIR/node_modules/sqlite3" \
             "$STAGING_DIR/node_modules/node-sqlite3" 2>/dev/null || true
-        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+        working-directory: lib/@turbot/cli
 
       - name: Bundle @turbot packages
         shell: bash
         run: |
           # Create @turbot directory
           mkdir -p "$STAGING_DIR/node_modules/@turbot"
-          
+
           # List of local packages to bundle
           declare -a local_packages=(
             "cache" "compile-mod" "compose" "constants" "data-utils" "errors"
@@ -163,9 +175,9 @@ jobs:
             "rdb-watches" "redis" "runnable-test-helper" "tdb-pool" "utils"
             "validator"
           )
-          
+
           for pkg in "${local_packages[@]}"; do
-            if [[ -d ../$pkg ]]; then
+            if [[ -d ../../../lib/@turbot/$pkg ]]; then
               echo "📦 Bundling @turbot/$pkg"
               rm -rf "$STAGING_DIR/node_modules/@turbot/$pkg"
               if command -v rsync &> /dev/null; then
@@ -177,15 +189,15 @@ jobs:
                   --exclude 'test' \
                   --exclude 'tests' \
                   --exclude '__tests__' \
-                  "../$pkg/" "$STAGING_DIR/node_modules/@turbot/$pkg/"
+                  "../../../lib/@turbot/$pkg/" "$STAGING_DIR/node_modules/@turbot/$pkg/"
               else
-                cp -R "../$pkg" "$STAGING_DIR/node_modules/@turbot/"
+                cp -R "../../../lib/@turbot/$pkg" "$STAGING_DIR/node_modules/@turbot/"
                 rm -rf "$STAGING_DIR/node_modules/@turbot/$pkg/node_modules" 2>/dev/null || true
                 rm -rf "$STAGING_DIR/node_modules/@turbot/$pkg"/{test,tests,__tests__,dist} 2>/dev/null || true
               fi
             fi
           done
-        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+        working-directory: lib/@turbot/cli
 
       - name: Create bootstrap script
         shell: bash
@@ -222,7 +234,7 @@ jobs:
           // Load the app
           require("./turbot.js");
           EOF
-        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+        working-directory: lib/@turbot/cli
 
       - name: Build binary with caxa
         shell: bash
@@ -233,7 +245,7 @@ jobs:
             --output "dist/${{ matrix.binary_name }}" \
             --no-dedupe \
             -- "node" "{{caxa}}/bootstrap.js"
-        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+        working-directory: lib/@turbot/cli
 
       - name: Create archive (Linux)
         if: matrix.platform == 'linux'
@@ -241,7 +253,7 @@ jobs:
         run: |
           cd dist
           tar -czf "turbot_cli_${{ steps.package_version.outputs.version }}_linux_amd64.tar.gz" turbot-linux
-        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+        working-directory: lib/@turbot/cli
 
       - name: Create archive (Windows/macOS)
         if: matrix.platform != 'linux'
@@ -253,20 +265,20 @@ jobs:
           else
             zip "turbot_cli_${{ steps.package_version.outputs.version }}_darwin_amd64.zip" turbot-macos
           fi
-        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+        working-directory: lib/@turbot/cli
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
           name: turbot-cli-${{ matrix.platform }}
-          path: ${{ github.workspace }}/lib/@turbot/cli/dist/${{ matrix.binary_name }}
+          path: lib/@turbot/cli/dist/${{ matrix.binary_name }}
           retention-days: 30
 
       - name: Upload archive artifact
         uses: actions/upload-artifact@v4
         with:
           name: turbot-cli-${{ matrix.platform }}-archive
-          path: ${{ github.workspace }}/lib/@turbot/cli/dist/turbot_cli_*
+          path: lib/@turbot/cli/dist/turbot_cli_*
           retention-days: 30
 
       - name: Cleanup
@@ -274,16 +286,32 @@ jobs:
         shell: bash
         run: |
           rm -rf "$STAGING_DIR"
-        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+        working-directory: lib/@turbot/cli
 
   release:
     name: Create Release
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - name: Checkout guardrails-cli repository
+        uses: actions/checkout@v4
+
+      - name: Determine release version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.releaseVersion }}" >> $GITHUB_OUTPUT
+            echo "tag=v${{ github.event.inputs.releaseVersion }}" >> $GITHUB_OUTPUT
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          fi
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -292,6 +320,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.version }}
           files: |
             artifacts/turbot-cli-*-archive/*
           draft: false
