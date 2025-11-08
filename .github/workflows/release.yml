@@ -1,4 +1,5 @@
-name: CLI Automated Release
+name: Release CLI
+
 on:
   workflow_dispatch:
     inputs:
@@ -8,39 +9,133 @@ on:
       branchName:
         description: "The branch name from turbot-core repo"
         required: true
+
 jobs:
-  build:
-    name: Build
+  prepare_tests:
+    name: Package Acceptance Tests
     runs-on: ubuntu-latest
-
     env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+      ARTIFACT_DIR: ${{ github.workspace }}/.release-cli/tests
     steps:
-      # if we don't do this, Git will convert all line endings to CRLF when cloning on windows
-      - name: Set Git to use Linux-style line endings
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
-
-      - name: Check out turbot-core
-        uses: actions/checkout@master
+      - name: Checkout turbot-core
+        if: ${{ matrix.target_os != 'windows' }}
+        uses: actions/checkout@v4
         with:
           repository: turbotio/turbot-core
           ssh-key: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
           ref: ${{ github.event.inputs.branchName }}
           submodules: true
 
-      - name: Read package.json
-        uses: tyankatsu0105/read-package-version-actions@v1
+      - name: Checkout turbot-core (Windows)
+        if: ${{ matrix.target_os == 'windows' }}
+        shell: pwsh
+        run: |
+          git config --global core.protectNTFS false
+          $branch = "${{ github.event.inputs.branchName }}"
+          Get-ChildItem -Force | ForEach-Object { Remove-Item -Recurse -Force $_ }
+          git clone --no-checkout --depth=1 --filter=blob:none --single-branch --branch $branch git@github.com:turbotio/turbot-core.git repo-tmp
+          Set-Location repo-tmp
+          git sparse-checkout init --no-cone
+          git sparse-checkout set --skip-checks '/*' '!lib/@turbot/tacl/old_test/**'
+          git checkout $branch
+          git submodule update --init --recursive
+          Set-Location ..
+          $exclude = @("lib\@turbot\tacl\old_test")
+          cmd /c "robocopy repo-tmp . /E /NFL /NDL /NJH /NJS /NC /NS /XD $($exclude -join ' ') || exit /b 0"
+          Remove-Item -Recurse -Force repo-tmp
+
+      - name: Create tests archive
+        shell: bash
+        run: |
+          mkdir -p "$ARTIFACT_DIR"
+          cd lib/@turbot/cli
+          zip -qr "$ARTIFACT_DIR/tests.zip" test
+
+      - name: Upload acceptance test suite
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-artifact
+          path: ${{ env.ARTIFACT_DIR }}/tests.zip
+          if-no-files-found: error
+
+  build:
+    name: Build ${{ matrix.name }} binary
+    runs-on: ${{ matrix.runner }}
+    needs: prepare_tests
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ARTIFACT_DIR: ${{ github.workspace }}/.release-cli/build/${{ matrix.target_os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            runner: macos-latest
+            target_os: macos
+            archive_format: zip
+            artifact_name: build-artifact-darwin
+            artifact_basename: darwin.zip
+            release_suffix: darwin_amd64
+          - name: Linux
+            runner: ubuntu-latest
+            target_os: linux
+            archive_format: zip
+            artifact_name: build-artifact-linux
+            artifact_basename: linux.zip
+            release_suffix: linux_amd64
+          - name: Windows
+            runner: windows-latest
+            target_os: windows
+            archive_format: zip
+            artifact_name: build-artifact-windows
+            artifact_basename: windows.zip
+            release_suffix: windows_amd64
+    steps:
+      - name: Configure git line endings
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Disable NTFS filename protection
+        if: ${{ matrix.target_os == 'windows' }}
+        shell: pwsh
+        run: git config --global core.protectNTFS false
+
+      - name: Checkout turbot-core
+        if: ${{ matrix.target_os != 'windows' }}
+        uses: actions/checkout@v4
+        with:
+          repository: turbotio/turbot-core
+          ssh-key: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
+          ref: ${{ github.event.inputs.branchName }}
+          submodules: true
+
+      - name: Checkout turbot-core (Windows)
+        if: ${{ matrix.target_os == 'windows' }}
+        shell: pwsh
+        run: |
+          git config --global core.protectNTFS false
+          $branch = "${{ github.event.inputs.branchName }}"
+          Get-ChildItem -Force | ForEach-Object { Remove-Item -Recurse -Force $_ }
+          git clone --no-checkout --depth=1 --filter=blob:none --single-branch --branch $branch git@github.com:turbotio/turbot-core.git repo-tmp
+          Set-Location repo-tmp
+          git sparse-checkout init --no-cone
+          git sparse-checkout set --skip-checks '/*' '!lib/@turbot/tacl/old_test/**'
+          git checkout $branch
+          git submodule update --init --recursive
+          Set-Location ..
+          cmd /c "robocopy repo-tmp . /E /NFL /NDL /NJH /NJS /NC /NS || exit /b 0"
+          Remove-Item -Recurse -Force repo-tmp
+
+      - name: Read package.json version
         id: package-version
+        uses: tyankatsu0105/read-package-version-actions@v1
         with:
           path: ${{ github.workspace }}/lib/@turbot/cli
 
-      - name: Release Version
-        run: echo "Version is ${{ steps.package-version.outputs.version }}"
-
-      - name: Validate version match
+      - name: Validate requested release version
+        shell: bash
         run: |
           if [ "${{ github.event.inputs.releaseVersion }}" != "${{ steps.package-version.outputs.version }}" ]; then
             echo "ERROR: Input version '${{ github.event.inputs.releaseVersion }}' does not match package.json version '${{ steps.package-version.outputs.version }}'"
@@ -48,7 +143,7 @@ jobs:
           fi
           echo "Version validation passed: ${{ steps.package-version.outputs.version }}"
 
-      - name: Get already released versions
+      - name: Check for version collisions
         id: released_versions
         uses: octokit/request-action@v2.x
         with:
@@ -57,103 +152,75 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Version collision notification
+      - name: Abort if version already released
         if: ${{ contains(fromJSON(steps.released_versions.outputs.data).*.name, steps.package-version.outputs.version) }}
         run: |
-          echo "WARNING: There was a name collision with an already released versions"
-          # exit -1
+          echo "WARNING: Version already released – aborting build."
           exit 0
 
-      - name: Use Node.js 16
-        uses: actions/setup-node@v3
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 22
 
-      - name: Reconfigure git to use HTTPS authentication
-        run: >
-          git config --global url."https://github.com/".insteadOf
-          ssh://git@github.com/
+      - name: Reconfigure git for HTTPS
+        shell: bash
+        run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
 
-      - name: Install npm packages
+      - name: Install dependencies
         env:
           FONTAWESOME_NPM_AUTH_TOKEN: ${{ secrets.FONTAWESOME_NPM_AUTH_TOKEN }}
+        shell: bash
         run: |
-          npm install --no-optional
+          npm install --omit=optional
           echo "PATH=$PATH:$(pwd)/node_modules/.bin" >> $GITHUB_ENV
           echo "NODE_PATH=$GITHUB_WORKSPACE/lib" >> $GITHUB_ENV
 
-      #     echo ::set-env name=PATH::"$PATH:$(pwd)/node_modules/.bin"
-      #     echo ::set-env name=NODE_PATH::"$GITHUB_WORKSPACE/lib"
+      - name: Install caxa
+        shell: bash
+        run: npm install --global caxa
 
-      - name: Build CLI Binaries
+      - name: Build CLI binary with caxa
+        shell: bash
+        working-directory: lib/@turbot/cli
+        env:
+          TARGET_OS: ${{ matrix.target_os }}
+          TARGET_ARCH: amd64
+          TARGET_ARCHIVE_FORMAT: ${{ matrix.archive_format }}
         run: |
-          echo $PATH
-          echo $NODE_PATH
-          ls $GITHUB_WORKSPACE/node_modules/.bin/nexe
-          cd $GITHUB_WORKSPACE/lib/@turbot/cli
-          ./compile.sh
+          chmod +x compile-caxa.sh
+          ./compile-caxa.sh
 
-      - name: Move build artifacts
+      - name: Collect build artifacts
+        shell: bash
+        env:
+          VERSION: ${{ github.event.inputs.releaseVersion }}
         run: |
-          mkdir ~/artifacts
-          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_windows_amd64.zip ~/artifacts/windows.zip
-          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_linux_amd64.zip ~/artifacts/linux.zip
-          mv $GITHUB_WORKSPACE/lib/@turbot/cli/dist/turbot_cli_${{ steps.package-version.outputs.version }}_darwin_amd64.zip ~/artifacts/darwin.zip
+          mkdir -p "$ARTIFACT_DIR"
+          ARCHIVE_NAME="turbot_cli_${VERSION}_${{ matrix.release_suffix }}.zip"
+          cp "$GITHUB_WORKSPACE/lib/@turbot/cli/dist/$ARCHIVE_NAME" "$ARTIFACT_DIR/${{ matrix.artifact_basename }}"
 
-      - name: Zip up Acceptance Test Suite
-        run: |
-          mv $GITHUB_WORKSPACE/lib/@turbot/cli/test ~/tests
-          cd ~/tests
-          zip -r ~/artifacts/tests.zip .
-          cd -
-
-      - name: List Build Artifacts
-        run: ls -l ~/artifacts
-
-      - name: Save Windows Build Artifact
+      - name: Upload ${{ matrix.name }} build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifact-windows
-          path: ~/artifacts/windows.zip
-          if-no-files-found: error
-
-      - name: Save Linux Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifact-linux
-          path: ~/artifacts/linux.zip
-          if-no-files-found: error
-
-      - name: Save MacOS Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifact-darwin
-          path: ~/artifacts/darwin.zip
-          if-no-files-found: error
-
-      - name: Save Acceptance Test Suite
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-artifact
-          path: ~/artifacts/tests.zip
+          name: ${{ matrix.artifact_name }}
+          path: ${{ env.ARTIFACT_DIR }}/${{ matrix.artifact_basename }}
           if-no-files-found: error
 
     outputs:
       version: ${{ steps.package-version.outputs.version }}
 
   acceptance_tests:
-    name: Run Acceptance Tests on ${{ matrix.platform }}
-    needs: build
-
+    name: Acceptance Tests on ${{ matrix.platform }}
+    needs: [build, prepare_tests]
     strategy:
       matrix:
         platform: [ubuntu-latest, macos-latest]
-
     runs-on: ${{ matrix.platform }}
-
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TURBOT_CLI_ACC_PROFILE: acceptance_test_profile
+      ARTIFACT_DIR: ${{ github.workspace }}/.release-cli/acceptance
       TURBOT_CLI_ACC_REGISTRY: turbot-stg.com
       TURBOT_CLI_ACC_ACCESS_KEY: ${{ secrets.TURBOT_CLI_ACC_ACCESS_KEY }}
       TURBOT_CLI_ACC_SECRET_KEY: ${{ secrets.TURBOT_CLI_ACC_SECRET_KEY }}
@@ -161,102 +228,84 @@ jobs:
       TURBOT_CLI_ACC_REGISTRY_USER: ${{ secrets.TURBOT_CLI_ACC_REGISTRY_USER }}
       TURBOT_CLI_ACC_REGISTRY_PASS: ${{ secrets.TURBOT_CLI_ACC_REGISTRY_PASS }}
       TURBOT_CLI_ACC_TEST_BINARY: setting_this_so_that_tests_are_run_on_the_binary
-
     steps:
-      - name: Setting up Node.js 16
+      - name: Setup Node.js 16
         uses: actions/setup-node@v3
         with:
           node-version: 16
 
-      - name: Reconfigure git to use HTTPS authentication
-        run: >
-          git config --global url."https://github.com/".insteadOf
-          ssh://git@github.com/
+      - name: Reconfigure git for HTTPS
+        run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
 
-      - name: Prepare for downloads
-        id: prepare-for-downloads
-        run: |
-          mkdir ~/artifacts
+      - name: Prepare artifact directory
+        shell: bash
+        run: mkdir -p "$ARTIFACT_DIR"
 
-      # - name: Download Windows Build Artifacts
-      #   uses: actions/download-artifact@v4
-      #   if: ${{ matrix.platform == 'windows-latest' }}
-      #   with:
-      #     name: build-artifact-windows
-      #     path: ~/artifacts
-
-      - name: Download Linux Build Artifacts
-        uses: actions/download-artifact@v4
+      - name: Download Linux build artifact
         if: ${{ matrix.platform == 'ubuntu-latest' }}
+        uses: actions/download-artifact@v4
         with:
           name: build-artifact-linux
-          path: ~/artifacts
+          path: ${{ env.ARTIFACT_DIR }}
 
-      - name: Download Darwin Build Artifacts
-        uses: actions/download-artifact@v4
+      - name: Download macOS build artifact
         if: ${{ matrix.platform == 'macos-latest' }}
+        uses: actions/download-artifact@v4
         with:
           name: build-artifact-darwin
-          path: ~/artifacts
+          path: ${{ env.ARTIFACT_DIR }}
 
-      - name: Download Acceptance Test Suite
+      - name: Download acceptance test suite
         uses: actions/download-artifact@v4
         with:
           name: test-artifact
-          path: ~/artifacts
+          path: ${{ env.ARTIFACT_DIR }}
 
-      - name: Check that everything got downloaded
+      - name: Rename build archive for tests
+        shell: bash
         run: |
-          ls -l ~/artifacts
+          if [[ "${{ matrix.platform }}" == "ubuntu-latest" ]]; then
+            mv "$ARTIFACT_DIR/linux.zip" "$ARTIFACT_DIR/build.zip"
+          else
+            mv "$ARTIFACT_DIR/darwin.zip" "$ARTIFACT_DIR/build.zip"
+          fi
 
-      - name: Rename build artifact on Darwin
-        if: ${{ matrix.platform == 'macos-latest' }}
-        run: mv ~/artifacts/darwin.zip ~/artifacts/build.zip
-
-      - name: Rename build artifact on Linux
-        if: ${{ matrix.platform == 'ubuntu-latest' }}
-        run: mv ~/artifacts/linux.zip ~/artifacts/build.zip
-
-      - name: Check that renaming is good
+      - name: Extract artifacts
+        shell: bash
         run: |
-          ls -l ~/artifacts
+          BUILD_DIR="$ARTIFACT_DIR/build"
+          TESTS_DIR="$ARTIFACT_DIR/tests"
+          mkdir -p "$BUILD_DIR" "$TESTS_DIR"
+          unzip -q "$ARTIFACT_DIR/build.zip" -d "$BUILD_DIR"
+          unzip -q "$ARTIFACT_DIR/tests.zip" -d "$TESTS_DIR"
+          echo "PATH=$PATH:$BUILD_DIR:$TESTS_DIR/acceptance/bats_tests/libs/bats/libexec" >> $GITHUB_ENV
+          cd "$TESTS_DIR"
+          npm install console.table js-yaml
 
-      - name: Extract Artifacts and Install Binary
-        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
-        run: |
-          mkdir ~/build
-          mkdir ~/tests
-          unzip ~/artifacts/build.zip -d ~/build
-          ls -l ~/build
-          unzip ~/artifacts/tests.zip -d ~/tests
-          ls -l ~/tests
-          echo "PATH=$PATH:$HOME/build:$HOME/tests/acceptance/bats_tests/libs/bats/libexec" >> $GITHUB_ENV
-          cd ~/tests
-          npm install console.table
-          npm install js-yaml
-
-      - name: Setup Config Dir
-        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
+      - name: Setup config directory
+        shell: bash
         run: |
           mkdir -p $HOME/.config/turbot
           touch $HOME/.config/turbot/config.yml
           touch $HOME/.config/turbot/credentials.yml
           touch $HOME/.config/turbot/registry.yml
 
-  #      - name: Run Tests
-  #        if: ${{ matrix.platform == 'macos-latest' || matrix.platform == 'ubuntu-latest' }}
-  #        run: |
-  #          chmod +x $HOME/tests/run_acceptance.sh
-  #          $HOME/tests/run_acceptance.sh
+      # Re-enable once tests are ready to run the binary
+      # - name: Run acceptance tests
+      #   shell: bash
+      #   run: |
+      #     chmod +x $HOME/tests/run_acceptance.sh
+      #     $HOME/tests/run_acceptance.sh
 
   create_release:
-    name: Release
+    name: Create GitHub Release
     needs: [build, acceptance_tests]
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ARTIFACT_DIR: ${{ github.workspace }}/.release-cli/final
     steps:
-      - name: Create Release
+      - name: Create draft release
         id: create_release
         uses: actions/create-release@latest
         env:
@@ -268,91 +317,78 @@ jobs:
           draft: true
           prerelease: false
 
-      - name: Export the HOME directory
-        id: home_export
-        run: echo "::set-output name=home::$HOME"
+      - name: Prepare artifact staging
+        run: mkdir -p "$ARTIFACT_DIR"
 
-      - name: Prepare for Build Artifacts
-        run: mkdir ${{ steps.home_export.outputs.home }}/release_artifacts
-
-      - name: Download Darwin Build Artifacts
+      - name: Download macOS artifact
         uses: actions/download-artifact@v4
         with:
           name: build-artifact-darwin
-          path: ${{ steps.home_export.outputs.home }}/release_artifacts
+          path: ${{ env.ARTIFACT_DIR }}
 
-      - name: Download Windows Build Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifact-windows
-          path: ${{ steps.home_export.outputs.home }}/release_artifacts
-
-      - name: Download Linux Build Artifacts
+      - name: Download Linux artifact
         uses: actions/download-artifact@v4
         with:
           name: build-artifact-linux
-          path: ${{ steps.home_export.outputs.home }}/release_artifacts
+          path: ${{ env.ARTIFACT_DIR }}
 
-      - name: Upload Darwin Release Asset
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact-windows
+          path: ${{ env.ARTIFACT_DIR }}
+
+      - name: Upload macOS release asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.home_export.outputs.home }}/release_artifacts/darwin.zip
+          asset_path: ${{ env.ARTIFACT_DIR }}/darwin.zip
           asset_name: turbot_cli_${{ needs.build.outputs.version }}_darwin_amd64.zip
           asset_content_type: application/zip
 
-      - name: Upload Linux Release Asset
+      - name: Upload Linux release asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.home_export.outputs.home }}/release_artifacts/linux.zip
+          asset_path: ${{ env.ARTIFACT_DIR }}/linux.zip
           asset_name: turbot_cli_${{ needs.build.outputs.version }}_linux_amd64.zip
           asset_content_type: application/zip
 
-      - name: Upload Windows Release Asset
+      - name: Upload Windows release asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.home_export.outputs.home }}/release_artifacts/windows.zip
+          asset_path: ${{ env.ARTIFACT_DIR }}/windows.zip
           asset_name: turbot_cli_${{ needs.build.outputs.version }}_windows_amd64.zip
           asset_content_type: application/zip
 
   clean_up:
-    # let's clean up the artifacts.
-    # incase this step isn't reached,
-    # artifacts automatically expire after 90 days anyway
-    # refer:
-    # https://docs.github.com/en/actions/configuring-and-managing-workflows/persisting-workflow-data-using-artifacts#downloading-and-deleting-artifacts-after-a-workflow-run-is-complete
     name: Clean Up Artifacts
     needs: create_release
     runs-on: ubuntu-latest
     steps:
-      - name: Clean up Windows Build
-        uses: geekyeggo/delete-artifact@v1
+      - uses: geekyeggo/delete-artifact@v1
         with:
           name: build-artifact-windows
           failOnError: true
 
-      - name: Clean up Linux Build
-        uses: geekyeggo/delete-artifact@v1
+      - uses: geekyeggo/delete-artifact@v1
         with:
           name: build-artifact-linux
           failOnError: true
 
-      - name: Clean up Darwin Build
-        uses: geekyeggo/delete-artifact@v1
+      - uses: geekyeggo/delete-artifact@v1
         with:
           name: build-artifact-darwin
           failOnError: true
 
-      - name: Clean up Test Suite
-        uses: geekyeggo/delete-artifact@v1
+      - uses: geekyeggo/delete-artifact@v1
         with:
           name: test-artifact
           failOnError: true
