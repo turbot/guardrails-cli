@@ -35,8 +35,9 @@ jobs:
           ref: ${{ github.event.inputs.branchName }}
           submodules: true
           sparse-checkout: |
-            /*
-            !/lib/@turbot/tacl/**
+            *
+            !lib/@turbot/tacl/
+            !lib/@turbot/tacl/**
           sparse-checkout-cone: false
 
       - name: Create tests archive
