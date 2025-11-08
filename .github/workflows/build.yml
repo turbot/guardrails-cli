@@ -4,372 +4,298 @@ on:
   workflow_dispatch:
     inputs:
       releaseVersion:
-        description: "The version number of the new release"
+        description: "Release version"
         required: true
       branchName:
-        description: "The branch name from turbot-core repo"
+        description: "turbot-core branch"
         required: true
 
 jobs:
-  prepare_tests:
-    name: Package Acceptance Tests
-    runs-on: ubuntu-latest
-    env:
-      ARTIFACT_DIR: ${{ github.workspace }}/.release-cli/tests
-    steps:
-      - name: Checkout turbot-core
-        if: ${{ matrix.target_os != 'windows' }}
-        uses: actions/checkout@v4
-        with:
-          repository: turbotio/turbot-core
-          ssh-key: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
-          ref: ${{ github.event.inputs.branchName }}
-          submodules: true
-
-      - name: Checkout turbot-core (Windows)
-        if: ${{ matrix.target_os == 'windows' }}
-        shell: pwsh
-        run: |
-          git config --global core.protectNTFS false
-          $branch = "${{ github.event.inputs.branchName }}"
-          Get-ChildItem -Force | ForEach-Object { Remove-Item -Recurse -Force $_ }
-          git clone --no-checkout --depth=1 --filter=blob:none --single-branch --branch $branch git@github.com:turbotio/turbot-core.git repo-tmp
-          Set-Location repo-tmp
-          git sparse-checkout init --no-cone
-          git sparse-checkout set --skip-checks '/*' '!lib/@turbot/tacl/old_test/**'
-          git checkout $branch
-          git submodule update --init --recursive
-          Set-Location ..
-          cmd /c "robocopy repo-tmp . /E /NFL /NDL /NJH /NJS /NC /NS || exit /b 0"
-          Remove-Item -Recurse -Force repo-tmp
-
-      - name: Create tests archive
-        shell: bash
-        run: |
-          mkdir -p "$ARTIFACT_DIR"
-          cd lib/@turbot/cli
-          zip -qr "$ARTIFACT_DIR/tests.zip" test
-
-      - name: Upload acceptance test suite
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-artifact
-          path: ${{ env.ARTIFACT_DIR }}/tests.zip
-          if-no-files-found: error
-
   build:
-    name: Build ${{ matrix.name }} binary
-    runs-on: ${{ matrix.runner }}
-    needs: prepare_tests
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ARTIFACT_DIR: ${{ github.workspace }}/.release-cli/build/${{ matrix.target_os }}
+    name: Build ${{ matrix.os }} Binary
+    runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         include:
-          - name: macOS
-            runner: macos-latest
-            target_os: macos
-            archive_format: zip
-            artifact_name: build-artifact-darwin
-            artifact_basename: darwin.zip
-            release_suffix: darwin_amd64
-          - name: Linux
-            runner: ubuntu-latest
-            target_os: linux
-            archive_format: zip
-            artifact_name: build-artifact-linux
-            artifact_basename: linux.zip
-            release_suffix: linux_amd64
-          - name: Windows
-            runner: windows-latest
-            target_os: windows
-            archive_format: zip
-            artifact_name: build-artifact-windows
-            artifact_basename: windows.zip
-            release_suffix: windows_amd64
+          - os: ubuntu-latest
+            platform: linux
+            binary_name: turbot-linux
+            archive_name: turbot_cli_${PACKAGE_VERSION}_linux_amd64.tar.gz
+          - os: windows-latest
+            platform: windows
+            binary_name: turbot-windows.exe
+            archive_name: turbot_cli_${PACKAGE_VERSION}_windows_amd64.zip
+          - os: macos-latest
+            platform: macos
+            binary_name: turbot-macos
+            archive_name: turbot_cli_${PACKAGE_VERSION}_darwin_amd64.zip
+
     steps:
-      - name: Configure git line endings
-        shell: bash
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
-
-      - name: Disable NTFS filename protection
-        if: ${{ matrix.target_os == 'windows' }}
-        shell: pwsh
-        run: git config --global core.protectNTFS false
-
-      - name: Checkout turbot-core
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           repository: turbotio/turbot-core
           ssh-key: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
           ref: ${{ github.event.inputs.branchName }}
-          submodules: true
 
-      - name: Read package.json version
-        id: package-version
-        uses: tyankatsu0105/read-package-version-actions@v1
-        with:
-          path: ${{ github.workspace }}/lib/@turbot/cli
-
-      - name: Validate requested release version
-        shell: bash
-        run: |
-          if [ "${{ github.event.inputs.releaseVersion }}" != "${{ steps.package-version.outputs.version }}" ]; then
-            echo "ERROR: Input version '${{ github.event.inputs.releaseVersion }}' does not match package.json version '${{ steps.package-version.outputs.version }}'"
-            exit 1
-          fi
-          echo "Version validation passed: ${{ steps.package-version.outputs.version }}"
-
-      - name: Check for version collisions
-        id: released_versions
-        uses: octokit/request-action@v2.x
-        with:
-          route: GET /repos/:repository/releases
-          repository: ${{ github.repository }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Abort if version already released
-        if: ${{ contains(fromJSON(steps.released_versions.outputs.data).*.name, steps.package-version.outputs.version) }}
-        run: |
-          echo "WARNING: Version already released – aborting build."
-          exit 0
-
-      - name: Setup Node.js 22
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
-
-      - name: Reconfigure git for HTTPS
-        shell: bash
-        run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+          node-version: '18'
+          cache: 'npm'
 
       - name: Install dependencies
-        env:
-          FONTAWESOME_NPM_AUTH_TOKEN: ${{ secrets.FONTAWESOME_NPM_AUTH_TOKEN }}
-        shell: bash
         run: |
-          npm install --omit=optional
-          echo "PATH=$PATH:$(pwd)/node_modules/.bin" >> $GITHUB_ENV
-          echo "NODE_PATH=$GITHUB_WORKSPACE/lib" >> $GITHUB_ENV
+          pwd
+          npm i --no-optional
+        working-directory: .
 
       - name: Install caxa
-        shell: bash
-        run: npm install --global caxa
+        run: npm install -g caxa
 
-      - name: Build CLI binary with caxa
+      - name: Get package version
+        id: package_version
         shell: bash
-        working-directory: lib/@turbot/cli
-        env:
-          TARGET_OS: ${{ matrix.target_os }}
-          TARGET_ARCH: amd64
-          TARGET_ARCHIVE_FORMAT: ${{ matrix.archive_format }}
         run: |
-          chmod +x compile-caxa.sh
-          ./compile-caxa.sh
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        working-directory: ${{ github.workspace }}/lib/@turbot/cli
 
-      - name: Collect build artifacts
+      - name: Create staging directory
         shell: bash
-        env:
-          VERSION: ${{ github.event.inputs.releaseVersion }}
         run: |
-          mkdir -p "$ARTIFACT_DIR"
-          ARCHIVE_NAME="turbot_cli_${VERSION}_${{ matrix.release_suffix }}.zip"
-          cp "$GITHUB_WORKSPACE/lib/@turbot/cli/dist/$ARCHIVE_NAME" "$ARTIFACT_DIR/${{ matrix.artifact_basename }}"
+          STAGING_DIR=".staging-caxa"
+          rm -rf "$STAGING_DIR"
+          mkdir -p "$STAGING_DIR"
+          echo "STAGING_DIR=$STAGING_DIR" >> $GITHUB_ENV
+        working-directory: ${{ github.workspace }}/lib/@turbot/cli
 
-      - name: Upload ${{ matrix.name }} build artifact
+      - name: Copy application files
+        shell: bash
+        run: |
+          cp turbot.js "$STAGING_DIR/"
+          cp -r cmds "$STAGING_DIR/"
+          cp -r lib "$STAGING_DIR/"
+          cp -r inspectTemplates "$STAGING_DIR/"
+          cp -r docs "$STAGING_DIR/" 2>/dev/null || true
+          cp .turbotIgnore "$STAGING_DIR/" 2>/dev/null || true
+          cp package.json "$STAGING_DIR/"
+        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+
+      - name: Copy node_modules (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if command -v rsync &> /dev/null; then
+            rsync -a \
+              --exclude='**/test/**' \
+              --exclude='**/tests/**' \
+              --exclude='**/__tests__/**' \
+              --exclude='**/docs/**' \
+              --exclude='**/examples/**' \
+              --exclude='**/*.md' \
+              --exclude='**/.git/**' \
+              ../../../node_modules/ "$STAGING_DIR/node_modules/"
+          else
+            cp -R ../../../node_modules "$STAGING_DIR/"
+            find "$STAGING_DIR/node_modules" -type d \( -name test -o -name tests -o -name __tests__ -o -name docs -o -name examples \) -prune -exec rm -rf {} +
+            find "$STAGING_DIR/node_modules" -type f -name '*.md' -delete
+          fi
+        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+
+      - name: Copy node_modules (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item -Path "../../../node_modules" -Destination "$env:STAGING_DIR/" -Recurse -Force
+          Get-ChildItem -Path "$env:STAGING_DIR/node_modules" -Include test,tests,__tests__,docs,examples -Recurse -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          Get-ChildItem -Path "$env:STAGING_DIR/node_modules" -Filter "*.md" -Recurse -File | Remove-Item -Force -ErrorAction SilentlyContinue
+        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+
+      - name: Remove unused optional modules
+        shell: bash
+        run: |
+          rm -rf \
+            "$STAGING_DIR/node_modules/pg-native" \
+            "$STAGING_DIR/node_modules/pg-query-stream" \
+            "$STAGING_DIR/node_modules/pg-cursor" \
+            "$STAGING_DIR/node_modules/mysql" \
+            "$STAGING_DIR/node_modules/mysql2" \
+            "$STAGING_DIR/node_modules/oracledb" \
+            "$STAGING_DIR/node_modules/mariasql" \
+            "$STAGING_DIR/node_modules/tedious" \
+            "$STAGING_DIR/node_modules/sqlite3" \
+            "$STAGING_DIR/node_modules/node-sqlite3" 2>/dev/null || true
+        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+
+      - name: Bundle @turbot packages
+        shell: bash
+        run: |
+          # Create @turbot directory
+          mkdir -p "$STAGING_DIR/node_modules/@turbot"
+          
+          # List of local packages to bundle
+          declare -a local_packages=(
+            "cache" "compile-mod" "compose" "constants" "data-utils" "errors"
+            "events" "filter-parser" "filter-parser-2" "flags" "fn" "graphql"
+            "graphql-typedefs" "inline" "internal-utils" "jq-node" "ldap"
+            "license" "locks" "log" "memory-cache" "mocha" 
+            "mockserver-vcr-recorder-mocha" "mod" "nunjucks-core" "ocl" "rdb"
+            "rdb-action-types" "rdb-actions" "rdb-active-grants" 
+            "rdb-control-categories" "rdb-control-pivots" "rdb-control-types"
+            "rdb-controls" "rdb-daily-stats" "rdb-directories" "rdb-favorites"
+            "rdb-folders" "rdb-grants" "rdb-guardrail-accounts" 
+            "rdb-guardrail-control-types" "rdb-guardrails" "rdb-iam" 
+            "rdb-loaders" "rdb-locks" "rdb-membership-hierarchy" "rdb-mods"
+            "rdb-navigation-hierarchy" "rdb-notifications" "rdb-permission-levels"
+            "rdb-permission-types" "rdb-policies" "rdb-policy-hierarchy"
+            "rdb-policy-types" "rdb-policy-value-pivots" "rdb-policy-values"
+            "rdb-prevention-categories" "rdb-prevention-objectives" 
+            "rdb-prevention-rule-examples" "rdb-prevention-rules" 
+            "rdb-prevention-scores" "rdb-prevention-types" "rdb-process-logs"
+            "rdb-processes" "rdb-processes-history" "rdb-query-builder"
+            "rdb-resource-categories" "rdb-resource-groups" 
+            "rdb-resource-interfaces" "rdb-resource-types" "rdb-resources"
+            "rdb-rollout-accounts" "rdb-rollout-guardrails" "rdb-rollouts"
+            "rdb-scheduled-actions" "rdb-tags" "rdb-tenant-metadata"
+            "rdb-turbot-secrets" "rdb-watch-pivots" "rdb-watch-rules"
+            "rdb-watches" "redis" "runnable-test-helper" "tdb-pool" "utils"
+            "validator"
+          )
+          
+          for pkg in "${local_packages[@]}"; do
+            if [[ -d ../$pkg ]]; then
+              echo "📦 Bundling @turbot/$pkg"
+              rm -rf "$STAGING_DIR/node_modules/@turbot/$pkg"
+              if command -v rsync &> /dev/null; then
+                mkdir -p "$STAGING_DIR/node_modules/@turbot/$pkg"
+                rsync -a \
+                  --exclude 'node_modules' \
+                  --exclude '.git' \
+                  --exclude 'dist' \
+                  --exclude 'test' \
+                  --exclude 'tests' \
+                  --exclude '__tests__' \
+                  "../$pkg/" "$STAGING_DIR/node_modules/@turbot/$pkg/"
+              else
+                cp -R "../$pkg" "$STAGING_DIR/node_modules/@turbot/"
+                rm -rf "$STAGING_DIR/node_modules/@turbot/$pkg/node_modules" 2>/dev/null || true
+                rm -rf "$STAGING_DIR/node_modules/@turbot/$pkg"/{test,tests,__tests__,dist} 2>/dev/null || true
+              fi
+            fi
+          done
+        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+
+      - name: Create bootstrap script
+        shell: bash
+        run: |
+          cat > "$STAGING_DIR/bootstrap.js" << 'EOF'
+          const path = require("path");
+          const Module = require("module");
+
+          // Set up module paths BEFORE loading app
+          const appDir = __dirname;
+          const nodeModulesPath = path.join(appDir, "node_modules");
+          const atTurbotPath = path.join(nodeModulesPath, "@turbot");
+          const localLibPath = path.join(appDir, "lib");
+
+          const extraPaths = [nodeModulesPath, atTurbotPath, localLibPath];
+
+          extraPaths.forEach((p) => {
+            module.paths.unshift(p);
+            Module.globalPaths.unshift(p);
+          });
+
+          const existingNodePath = process.env.NODE_PATH ? process.env.NODE_PATH.split(path.delimiter) : [];
+          const mergedNodePath = [...extraPaths, ...existingNodePath.filter(Boolean)];
+          process.env.NODE_PATH = mergedNodePath.join(path.delimiter);
+          Module._initPaths();
+
+          if (!process.env.TURBOT_CORE) {
+            process.env.TURBOT_CORE = appDir;
+          }
+
+          // Set argv[1] to show 'turbot' instead of 'bootstrap.js'
+          process.argv[1] = "turbot";
+
+          // Load the app
+          require("./turbot.js");
+          EOF
+        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+
+      - name: Build binary with caxa
+        shell: bash
+        run: |
+          mkdir -p dist
+          caxa \
+            --input "$STAGING_DIR" \
+            --output "dist/${{ matrix.binary_name }}" \
+            --no-dedupe \
+            -- "node" "{{caxa}}/bootstrap.js"
+        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+
+      - name: Create archive (Linux)
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          cd dist
+          tar -czf "turbot_cli_${{ steps.package_version.outputs.version }}_linux_amd64.tar.gz" turbot-linux
+        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+
+      - name: Create archive (Windows/macOS)
+        if: matrix.platform != 'linux'
+        shell: bash
+        run: |
+          cd dist
+          if [[ "${{ matrix.platform }}" == "windows" ]]; then
+            7z a "turbot_cli_${{ steps.package_version.outputs.version }}_windows_amd64.zip" turbot-windows.exe
+          else
+            zip "turbot_cli_${{ steps.package_version.outputs.version }}_darwin_amd64.zip" turbot-macos
+          fi
+        working-directory: ${{ github.workspace }}/lib/@turbot/cli
+
+      - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ env.ARTIFACT_DIR }}/${{ matrix.artifact_basename }}
-          if-no-files-found: error
+          name: turbot-cli-${{ matrix.platform }}
+          path: ${{ github.workspace }}/lib/@turbot/cli/dist/${{ matrix.binary_name }}
+          retention-days: 30
 
-    outputs:
-      version: ${{ steps.package-version.outputs.version }}
-
-  acceptance_tests:
-    name: Acceptance Tests on ${{ matrix.platform }}
-    needs: [build, prepare_tests]
-    strategy:
-      matrix:
-        platform: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.platform }}
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      TURBOT_CLI_ACC_PROFILE: acceptance_test_profile
-      ARTIFACT_DIR: ${{ github.workspace }}/.release-cli/acceptance
-      TURBOT_CLI_ACC_REGISTRY: turbot-stg.com
-      TURBOT_CLI_ACC_ACCESS_KEY: ${{ secrets.TURBOT_CLI_ACC_ACCESS_KEY }}
-      TURBOT_CLI_ACC_SECRET_KEY: ${{ secrets.TURBOT_CLI_ACC_SECRET_KEY }}
-      TURBOT_CLI_ACC_WORKSPACE: ${{ secrets.TURBOT_CLI_ACC_WORKSPACE }}
-      TURBOT_CLI_ACC_REGISTRY_USER: ${{ secrets.TURBOT_CLI_ACC_REGISTRY_USER }}
-      TURBOT_CLI_ACC_REGISTRY_PASS: ${{ secrets.TURBOT_CLI_ACC_REGISTRY_PASS }}
-      TURBOT_CLI_ACC_TEST_BINARY: setting_this_so_that_tests_are_run_on_the_binary
-    steps:
-      - name: Setup Node.js 16
-        uses: actions/setup-node@v3
+      - name: Upload archive artifact
+        uses: actions/upload-artifact@v4
         with:
-          node-version: 16
+          name: turbot-cli-${{ matrix.platform }}-archive
+          path: ${{ github.workspace }}/lib/@turbot/cli/dist/turbot_cli_*
+          retention-days: 30
 
-      - name: Reconfigure git for HTTPS
-        run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
-
-      - name: Prepare artifact directory
-        shell: bash
-        run: mkdir -p "$ARTIFACT_DIR"
-
-      - name: Download Linux build artifact
-        if: ${{ matrix.platform == 'ubuntu-latest' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifact-linux
-          path: ${{ env.ARTIFACT_DIR }}
-
-      - name: Download macOS build artifact
-        if: ${{ matrix.platform == 'macos-latest' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifact-darwin
-          path: ${{ env.ARTIFACT_DIR }}
-
-      - name: Download acceptance test suite
-        uses: actions/download-artifact@v4
-        with:
-          name: test-artifact
-          path: ${{ env.ARTIFACT_DIR }}
-
-      - name: Rename build archive for tests
+      - name: Cleanup
+        if: always()
         shell: bash
         run: |
-          if [[ "${{ matrix.platform }}" == "ubuntu-latest" ]]; then
-            mv "$ARTIFACT_DIR/linux.zip" "$ARTIFACT_DIR/build.zip"
-          else
-            mv "$ARTIFACT_DIR/darwin.zip" "$ARTIFACT_DIR/build.zip"
-          fi
+          rm -rf "$STAGING_DIR"
+        working-directory: ${{ github.workspace }}/lib/@turbot/cli
 
-      - name: Extract artifacts
-        shell: bash
-        run: |
-          BUILD_DIR="$ARTIFACT_DIR/build"
-          TESTS_DIR="$ARTIFACT_DIR/tests"
-          mkdir -p "$BUILD_DIR" "$TESTS_DIR"
-          unzip -q "$ARTIFACT_DIR/build.zip" -d "$BUILD_DIR"
-          unzip -q "$ARTIFACT_DIR/tests.zip" -d "$TESTS_DIR"
-          echo "PATH=$PATH:$BUILD_DIR:$TESTS_DIR/acceptance/bats_tests/libs/bats/libexec" >> $GITHUB_ENV
-          cd "$TESTS_DIR"
-          npm install console.table js-yaml
-
-      - name: Setup config directory
-        shell: bash
-        run: |
-          mkdir -p $HOME/.config/turbot
-          touch $HOME/.config/turbot/config.yml
-          touch $HOME/.config/turbot/credentials.yml
-          touch $HOME/.config/turbot/registry.yml
-
-      # Re-enable once tests are ready to run the binary
-      # - name: Run acceptance tests
-      #   shell: bash
-      #   run: |
-      #     chmod +x $HOME/tests/run_acceptance.sh
-      #     $HOME/tests/run_acceptance.sh
-
-  create_release:
-    name: Create GitHub Release
-    needs: [build, acceptance_tests]
+  release:
+    name: Create Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ARTIFACT_DIR: ${{ github.workspace }}/.release-cli/final
+    permissions:
+      contents: write
     steps:
-      - name: Create draft release
-        id: create_release
-        uses: actions/create-release@latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          tag_name: ${{ needs.build.outputs.version }}
-          release_name: ${{ needs.build.outputs.version }}
-          body: See https://turbot.com/v5/docs/releases/cli
-          draft: true
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/turbot-cli-*-archive/*
+          draft: false
           prerelease: false
-
-      - name: Prepare artifact staging
-        run: mkdir -p "$ARTIFACT_DIR"
-
-      - name: Download macOS artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifact-darwin
-          path: ${{ env.ARTIFACT_DIR }}
-
-      - name: Download Linux artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifact-linux
-          path: ${{ env.ARTIFACT_DIR }}
-
-      - name: Download Windows artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifact-windows
-          path: ${{ env.ARTIFACT_DIR }}
-
-      - name: Upload macOS release asset
-        uses: actions/upload-release-asset@v1
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.ARTIFACT_DIR }}/darwin.zip
-          asset_name: turbot_cli_${{ needs.build.outputs.version }}_darwin_amd64.zip
-          asset_content_type: application/zip
-
-      - name: Upload Linux release asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.ARTIFACT_DIR }}/linux.zip
-          asset_name: turbot_cli_${{ needs.build.outputs.version }}_linux_amd64.zip
-          asset_content_type: application/zip
-
-      - name: Upload Windows release asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.ARTIFACT_DIR }}/windows.zip
-          asset_name: turbot_cli_${{ needs.build.outputs.version }}_windows_amd64.zip
-          asset_content_type: application/zip
-
-  clean_up:
-    name: Clean Up Artifacts
-    needs: create_release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: geekyeggo/delete-artifact@v1
-        with:
-          name: build-artifact-windows
-          failOnError: true
-
-      - uses: geekyeggo/delete-artifact@v1
-        with:
-          name: build-artifact-linux
-          failOnError: true
-
-      - uses: geekyeggo/delete-artifact@v1
-        with:
-          name: build-artifact-darwin
-          failOnError: true
-
-      - uses: geekyeggo/delete-artifact@v1
-        with:
-          name: test-artifact
-          failOnError: true
