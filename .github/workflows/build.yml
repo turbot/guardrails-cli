@@ -32,12 +32,16 @@ jobs:
         run: |
           git config --global core.protectNTFS false
           $branch = "${{ github.event.inputs.branchName }}"
-          Get-ChildItem -Force | Where-Object { $_.Name -notin @('.','..') } | ForEach-Object { Remove-Item -Recurse -Force $_ }
-          git clone --no-checkout --depth=1 --filter=blob:none --single-branch --branch $branch git@github.com:turbotio/turbot-core.git .
+          Get-ChildItem -Force | ForEach-Object { Remove-Item -Recurse -Force $_ }
+          git clone --no-checkout --depth=1 --filter=blob:none --single-branch --branch $branch git@github.com:turbotio/turbot-core.git repo-tmp
+          Set-Location repo-tmp
           git sparse-checkout init --no-cone
-          git sparse-checkout set --skip-checks "/*" "!lib/@turbot/tacl/old_test/**"
+          git sparse-checkout set --skip-checks '/*' '!lib/@turbot/tacl/old_test/**'
           git checkout $branch
           git submodule update --init --recursive
+          Set-Location ..
+          cmd /c "robocopy repo-tmp . /E /NFL /NDL /NJH /NJS /NC /NS || exit /b 0"
+          Remove-Item -Recurse -Force repo-tmp
 
       - name: Create tests archive
         shell: bash
@@ -64,20 +68,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - name: macOS
-          #   runner: macos-latest
-          #   target_os: macos
-          #   archive_format: zip
-          #   artifact_name: build-artifact-darwin
-          #   artifact_basename: darwin.zip
-          #   release_suffix: darwin_amd64
-          # - name: Linux
-          #   runner: ubuntu-latest
-          #   target_os: linux
-          #   archive_format: zip
-          #   artifact_name: build-artifact-linux
-          #   artifact_basename: linux.zip
-          #   release_suffix: linux_amd64
+          - name: macOS
+            runner: macos-latest
+            target_os: macos
+            archive_format: zip
+            artifact_name: build-artifact-darwin
+            artifact_basename: darwin.zip
+            release_suffix: darwin_amd64
+          - name: Linux
+            runner: ubuntu-latest
+            target_os: linux
+            archive_format: zip
+            artifact_name: build-artifact-linux
+            artifact_basename: linux.zip
+            release_suffix: linux_amd64
           - name: Windows
             runner: windows-latest
             target_os: windows
