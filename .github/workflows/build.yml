@@ -93,6 +93,11 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.eol lf
 
+      - name: Disable NTFS filename protection
+        if: ${{ matrix.target_os == 'windows' }}
+        shell: pwsh
+        run: git config --global core.protectNTFS false
+
       - name: Checkout turbot-core
         uses: actions/checkout@v4
         with:
