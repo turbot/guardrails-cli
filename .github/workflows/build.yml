@@ -18,12 +18,26 @@ jobs:
       ARTIFACT_DIR: ${{ github.workspace }}/.release-cli/tests
     steps:
       - name: Checkout turbot-core
+        if: ${{ matrix.target_os != 'windows' }}
         uses: actions/checkout@v4
         with:
           repository: turbotio/turbot-core
           ssh-key: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
           ref: ${{ github.event.inputs.branchName }}
           submodules: true
+
+      - name: Checkout turbot-core (Windows)
+        if: ${{ matrix.target_os == 'windows' }}
+        uses: actions/checkout@v4
+        with:
+          repository: turbotio/turbot-core
+          ssh-key: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
+          ref: ${{ github.event.inputs.branchName }}
+          submodules: true
+          sparse-checkout: |
+            /*
+            !/lib/@turbot/tacl/old_test/**
+          sparse-checkout-cone: false
 
       - name: Create tests archive
         shell: bash
@@ -162,7 +176,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: ${{ env.ARTIFACT_DIR }}/{{ matrix.artifact_basename }}
+          path: ${{ env.ARTIFACT_DIR }}/${{ matrix.artifact_basename }}
           if-no-files-found: error
 
     outputs:
