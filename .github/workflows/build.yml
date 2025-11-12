@@ -277,9 +277,17 @@ jobs:
             tar -czf "turbot_cli_${PACKAGE_VERSION}_linux_amd64.tar.gz" "$BINARY_NAME"
             echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_linux_amd64.tar.gz"
           elif [[ "$PLATFORM" == "windows" ]]; then
-            zip "turbot_cli_${PACKAGE_VERSION}_windows_amd64.zip" "$BINARY_NAME"
+            # Use 7z on Windows (available by default on GitHub runners)
+            if command -v 7z &> /dev/null; then
+              7z a -tzip "turbot_cli_${PACKAGE_VERSION}_windows_amd64.zip" "$BINARY_NAME"
+            elif command -v zip &> /dev/null; then
+              zip "turbot_cli_${PACKAGE_VERSION}_windows_amd64.zip" "$BINARY_NAME"
+            else
+              echo "⚠️  Warning: Neither 7z nor zip found, skipping archive creation"
+            fi
             echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_windows_amd64.zip"
           else
+            # macOS - use zip
             zip "turbot_cli_${PACKAGE_VERSION}_darwin_amd64.zip" "$BINARY_NAME"
             echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_darwin_amd64.zip"
           fi
