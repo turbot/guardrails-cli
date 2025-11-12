@@ -36,6 +36,45 @@ jobs:
           ref: ${{ github.event.inputs.turbotCoreBranch }}
           ssh-key: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
           fetch-depth: 0
+          sparse-checkout: |
+            lib/@turbot/cli
+            lib/@turbot/cache
+            lib/@turbot/compile-mod
+            lib/@turbot/compose
+            lib/@turbot/constants
+            lib/@turbot/data-utils
+            lib/@turbot/errors
+            lib/@turbot/events
+            lib/@turbot/filter-parser
+            lib/@turbot/filter-parser-2
+            lib/@turbot/flags
+            lib/@turbot/fn
+            lib/@turbot/graphql
+            lib/@turbot/graphql-typedefs
+            lib/@turbot/inline
+            lib/@turbot/internal-utils
+            lib/@turbot/jq-node
+            lib/@turbot/ldap
+            lib/@turbot/license
+            lib/@turbot/locks
+            lib/@turbot/log
+            lib/@turbot/memory-cache
+            lib/@turbot/mocha
+            lib/@turbot/mockserver-vcr-recorder-mocha
+            lib/@turbot/mod
+            lib/@turbot/nunjucks-core
+            lib/@turbot/ocl
+            lib/@turbot/rdb
+            lib/@turbot/rdb-*
+            lib/@turbot/redis
+            lib/@turbot/runnable-test-helper
+            lib/@turbot/tdb-pool
+            lib/@turbot/utils
+            lib/@turbot/validator
+            node_modules
+            package.json
+            package-lock.json
+          sparse-checkout-cone-mode: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
