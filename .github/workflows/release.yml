@@ -20,13 +20,24 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
-            binary_name: turbot-linux
+            arch: amd64
+            binary_name: turbot-linux-amd64
+          - os: ubuntu-latest
+            platform: linux
+            arch: arm64
+            binary_name: turbot-linux-arm64
           - os: windows-latest
             platform: windows
-            binary_name: turbot-windows.exe
+            arch: amd64
+            binary_name: turbot-windows-amd64.exe
           - os: macos-latest
             platform: macos
-            binary_name: turbot-macos
+            arch: amd64
+            binary_name: turbot-macos-amd64
+          - os: macos-latest
+            platform: macos
+            arch: arm64
+            binary_name: turbot-macos-arm64
 
     steps:
       - name: Configure Git for Windows
