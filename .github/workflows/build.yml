@@ -34,7 +34,7 @@ jobs:
         with:
           repository: turbotio/turbot-core
           ref: ${{ github.event.inputs.turbotCoreBranch }}
-          token: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
+          ssh-key: ${{ secrets.TURBOT_CLI_DEPLOY_PRIVATE_KEY }}
           fetch-depth: 0
 
       - name: Setup Node.js
