@@ -29,6 +29,13 @@ jobs:
             binary_name: turbot-macos
 
     steps:
+      - name: Configure Git for Windows
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          git config --global core.protectNTFS false
+          git config --global core.longpaths true
+
       - name: Checkout turbot-core repository
         uses: actions/checkout@v4
         with:
@@ -173,9 +180,11 @@ jobs:
             if [[ -d ../../../lib/@turbot/$pkg ]]; then
               echo "📦 Bundling @turbot/$pkg"
               rm -rf "$STAGING_DIR/node_modules/@turbot/$pkg"
+              mkdir -p "$STAGING_DIR/node_modules/@turbot/$pkg"
+              
               if command -v rsync &> /dev/null; then
-                mkdir -p "$STAGING_DIR/node_modules/@turbot/$pkg"
-                rsync -a \
+                # rsync with -L to follow symlinks
+                rsync -aL \
                   --exclude 'node_modules' \
                   --exclude '.git' \
                   --exclude 'dist' \
@@ -184,9 +193,17 @@ jobs:
                   --exclude '__tests__' \
                   "../../../lib/@turbot/$pkg/" "$STAGING_DIR/node_modules/@turbot/$pkg/"
               else
-                cp -R "../../../lib/@turbot/$pkg" "$STAGING_DIR/node_modules/@turbot/"
-                rm -rf "$STAGING_DIR/node_modules/@turbot/$pkg/node_modules" 2>/dev/null || true
-                rm -rf "$STAGING_DIR/node_modules/@turbot/$pkg"/{test,tests,__tests__,dist} 2>/dev/null || true
+                # Use tar to copy and follow symlinks - works better on Windows
+                (cd "../../../lib/@turbot/$pkg" && \
+                  tar -ch \
+                    --exclude='node_modules' \
+                    --exclude='.git' \
+                    --exclude='dist' \
+                    --exclude='test' \
+                    --exclude='tests' \
+                    --exclude='__tests__' \
+                    -f - .) | \
+                  (cd "$STAGING_DIR/node_modules/@turbot/$pkg" && tar -xf -)
               fi
             fi
           done
