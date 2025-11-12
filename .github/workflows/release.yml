@@ -22,10 +22,6 @@ jobs:
             platform: linux
             arch: amd64
             binary_name: turbot-linux-amd64
-          - os: ubuntu-latest
-            platform: linux
-            arch: arm64
-            binary_name: turbot-linux-arm64
           - os: windows-latest
             platform: windows
             arch: amd64
@@ -34,10 +30,6 @@ jobs:
             platform: macos
             arch: amd64
             binary_name: turbot-macos-amd64
-          - os: macos-latest
-            platform: macos
-            arch: arm64
-            binary_name: turbot-macos-arm64
 
     steps:
       - name: Configure Git for Windows
