@@ -1,4 +1,4 @@
-name: Build CLI Binaries
+name: Release CLI
 
 on:
   workflow_dispatch:
