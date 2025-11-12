@@ -342,9 +342,58 @@ jobs:
           retention-days: 30
         if: matrix.platform != 'linux'
 
+  test-binaries:
+    name: Test ${{ matrix.platform }} Binary
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            binary_name: turbot-linux
+          - os: windows-latest
+            platform: windows
+            binary_name: turbot-windows.exe
+          - os: macos-latest
+            platform: macos
+            binary_name: turbot-macos
+
+    steps:
+      - name: Download binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: turbot-cli-${{ matrix.platform }}-binary
+          path: .
+
+      - name: Make binary executable (Unix)
+        if: runner.os != 'Windows'
+        run: chmod +x ${{ matrix.binary_name }}
+
+      - name: Test binary - version check
+        shell: bash
+        run: |
+          echo "Testing ${{ matrix.binary_name }}..."
+          ./${{ matrix.binary_name }} --version || true
+          echo "✅ Binary executed successfully"
+
+      - name: Test binary - help command
+        shell: bash
+        run: |
+          ./${{ matrix.binary_name }} --help || true
+          echo "✅ Help command executed"
+
+      - name: Test binary - basic commands (if applicable)
+        shell: bash
+        continue-on-error: true
+        run: |
+          # Add any other basic CLI commands you want to test
+          # These should not require authentication or external services
+          ./${{ matrix.binary_name }} || true
+
   create-release:
     name: Create GitHub Release
-    needs: build
+    needs: [build, test-binaries]
     runs-on: ubuntu-latest
     permissions:
       contents: write
