@@ -264,8 +264,8 @@ jobs:
           # Create archive based on platform
           cd dist
           if [[ "$PLATFORM" == "linux" ]]; then
-            tar -czf "turbot_cli_${PACKAGE_VERSION}_linux_${{ matrix.arch }}.tar.gz" "$BINARY_NAME"
-            echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_linux_${{ matrix.arch }}.tar.gz"
+            zip "turbot_cli_${PACKAGE_VERSION}_linux_${{ matrix.arch }}.zip" "$BINARY_NAME"
+            echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_linux_${{ matrix.arch }}.zip"
           elif [[ "$PLATFORM" == "windows" ]]; then
             # Use 7z on Windows (available by default on GitHub runners)
             if command -v 7z &> /dev/null; then
@@ -320,17 +320,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: turbot-cli-${{ matrix.platform }}-${{ matrix.arch }}-archive
-          path: lib/@turbot/cli/dist/turbot_cli_*.tar.gz
-          retention-days: 30
-        if: matrix.platform == 'linux'
-
-      - name: Upload archive artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: turbot-cli-${{ matrix.platform }}-${{ matrix.arch }}-archive
           path: lib/@turbot/cli/dist/turbot_cli_*.zip
           retention-days: 30
-        if: matrix.platform != 'linux'
 
   test-binaries:
     name: Test ${{ matrix.platform }} Binary
@@ -439,9 +430,9 @@ jobs:
             # Extract the zip and add the directory to your PATH
             ```
           files: |
-            artifacts/turbot-cli-linux-archive/*
-            artifacts/turbot-cli-macos-archive/*
-            artifacts/turbot-cli-windows-archive/*
+            artifacts/turbot-cli-linux-amd64-archive/*
+            artifacts/turbot-cli-macos-amd64-archive/*
+            artifacts/turbot-cli-windows-amd64-archive/*
           draft: false
           prerelease: false
         env:
