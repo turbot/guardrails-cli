@@ -277,22 +277,22 @@ jobs:
           # Create archive based on platform
           cd dist
           if [[ "$PLATFORM" == "linux" ]]; then
-            tar -czf "turbot_cli_${PACKAGE_VERSION}_linux_amd64.tar.gz" "$BINARY_NAME"
-            echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_linux_amd64.tar.gz"
+            tar -czf "turbot_cli_${PACKAGE_VERSION}_linux_${{ matrix.arch }}.tar.gz" "$BINARY_NAME"
+            echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_linux_${{ matrix.arch }}.tar.gz"
           elif [[ "$PLATFORM" == "windows" ]]; then
             # Use 7z on Windows (available by default on GitHub runners)
             if command -v 7z &> /dev/null; then
-              7z a -tzip "turbot_cli_${PACKAGE_VERSION}_windows_amd64.zip" "$BINARY_NAME"
+              7z a -tzip "turbot_cli_${PACKAGE_VERSION}_windows_${{ matrix.arch }}.zip" "$BINARY_NAME"
             elif command -v zip &> /dev/null; then
-              zip "turbot_cli_${PACKAGE_VERSION}_windows_amd64.zip" "$BINARY_NAME"
+              zip "turbot_cli_${PACKAGE_VERSION}_windows_${{ matrix.arch }}.zip" "$BINARY_NAME"
             else
               echo "⚠️  Warning: Neither 7z nor zip found, skipping archive creation"
             fi
-            echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_windows_amd64.zip"
+            echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_windows_${{ matrix.arch }}.zip"
           else
             # macOS - use zip
-            zip "turbot_cli_${PACKAGE_VERSION}_darwin_amd64.zip" "$BINARY_NAME"
-            echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_darwin_amd64.zip"
+            zip "turbot_cli_${PACKAGE_VERSION}_darwin_${{ matrix.arch }}.zip" "$BINARY_NAME"
+            echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_darwin_${{ matrix.arch }}.zip"
           fi
           cd ..
 
@@ -325,14 +325,14 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: turbot-cli-${{ matrix.platform }}-binary
+          name: turbot-cli-${{ matrix.platform }}-${{ matrix.arch }}-binary
           path: lib/@turbot/cli/dist/${{ matrix.binary_name }}
           retention-days: 30
 
       - name: Upload archive artifact
         uses: actions/upload-artifact@v4
         with:
-          name: turbot-cli-${{ matrix.platform }}-archive
+          name: turbot-cli-${{ matrix.platform }}-${{ matrix.arch }}-archive
           path: lib/@turbot/cli/dist/turbot_cli_*.tar.gz
           retention-days: 30
         if: matrix.platform == 'linux'
@@ -340,7 +340,7 @@ jobs:
       - name: Upload archive artifact
         uses: actions/upload-artifact@v4
         with:
-          name: turbot-cli-${{ matrix.platform }}-archive
+          name: turbot-cli-${{ matrix.platform }}-${{ matrix.arch }}-archive
           path: lib/@turbot/cli/dist/turbot_cli_*.zip
           retention-days: 30
         if: matrix.platform != 'linux'
@@ -354,19 +354,22 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
-            binary_name: turbot-linux
+            arch: amd64
+            binary_name: turbot-linux-amd64
           - os: windows-latest
             platform: windows
-            binary_name: turbot-windows.exe
+            arch: amd64
+            binary_name: turbot-windows-amd64.exe
           - os: macos-latest
             platform: macos
-            binary_name: turbot-macos
+            arch: amd64
+            binary_name: turbot-macos-amd64
 
     steps:
       - name: Download binary artifact
         uses: actions/download-artifact@v4
         with:
-          name: turbot-cli-${{ matrix.platform }}-binary
+          name: turbot-cli-${{ matrix.platform }}-${{ matrix.arch }}-binary
           path: .
 
       - name: Make binary executable (Unix)
@@ -427,9 +430,9 @@ jobs:
             - **guardrails-cli branch**: `${{ github.ref_name }}`
 
             ### Downloads
-            - **Linux**: `turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.tar.gz`
-            - **macOS**: `turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_amd64.zip`
-            - **Windows**: `turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip`
+            - **Linux (amd64)**: `turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.tar.gz`
+            - **macOS (amd64)**: `turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_amd64.zip`
+            - **Windows (amd64)**: `turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip`
 
             ### Installation
 
