@@ -1,5 +1,8 @@
 name: Test Install Script
 
+# This workflow only runs when install.sh or this workflow file is modified.
+# It will NOT run for other file changes in PRs or pushes.
+
 on:
   push:
     branches:
