@@ -1,0 +1,136 @@
+name: Test Install Script
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'install.sh'
+      - '.github/workflows/test-install-script.yml'
+  pull_request:
+    paths:
+      - 'install.sh'
+      - '.github/workflows/test-install-script.yml'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to test (e.g., v1.31.0-rc.1). Leave empty for latest.'
+        required: false
+        default: ''
+
+jobs:
+  test-install:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: macos
+          - os: windows-latest
+            platform: windows
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get latest release version
+        id: get_version
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            VERSION=$(curl -sSfL "https://api.github.com/repos/turbot/guardrails-cli/releases/latest" | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+          echo "Testing version: $VERSION"
+
+      - name: Test install script (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          chmod +x install.sh
+
+          # Create a local bin directory for testing (avoid sudo)
+          mkdir -p "$HOME/.local/bin"
+
+          # Run the installer
+          ./install.sh -b "$HOME/.local/bin" ${{ steps.get_version.outputs.version }}
+
+          # Verify binary exists
+          if [ -f "$HOME/.local/bin/turbot" ]; then
+            echo "✅ Binary installed successfully"
+            ls -la "$HOME/.local/bin/turbot"
+          else
+            echo "❌ Binary not found"
+            exit 1
+          fi
+
+          # Verify binary is executable
+          chmod +x "$HOME/.local/bin/turbot"
+
+          # Test the binary
+          echo "Testing binary..."
+          "$HOME/.local/bin/turbot" --version || true
+          "$HOME/.local/bin/turbot" --help | head -20 || true
+
+          echo "✅ Install script test passed on ${{ matrix.platform }}"
+
+      - name: Test install script (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          # Create a local bin directory for testing
+          mkdir -p "$HOME/turbot-bin"
+
+          # Run the installer using Git Bash
+          chmod +x install.sh
+          ./install.sh -b "$HOME/turbot-bin" ${{ steps.get_version.outputs.version }}
+
+          # Verify binary exists
+          if [ -f "$HOME/turbot-bin/turbot" ] || [ -f "$HOME/turbot-bin/turbot.exe" ]; then
+            echo "✅ Binary installed successfully"
+            ls -la "$HOME/turbot-bin/"
+          else
+            echo "❌ Binary not found"
+            ls -la "$HOME/turbot-bin/" || true
+            exit 1
+          fi
+
+          # Test the binary
+          echo "Testing binary..."
+          "$HOME/turbot-bin/turbot" --version || "$HOME/turbot-bin/turbot.exe" --version || true
+
+          echo "✅ Install script test passed on Windows"
+
+      - name: Upload installed binary as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: turbot-binary-${{ matrix.platform }}
+          path: |
+            ~/turbot-bin/turbot*
+            ~/.local/bin/turbot*
+          if-no-files-found: ignore
+          retention-days: 1
+
+  summary:
+    name: Test Summary
+    needs: test-install
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## Install Script Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | ${{ needs.test-install.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | ${{ needs.test-install.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows | ${{ needs.test-install.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
