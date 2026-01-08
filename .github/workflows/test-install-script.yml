@@ -41,13 +41,15 @@ jobs:
       - name: Get latest release version
         id: get_version
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -n "${{ github.event.inputs.version }}" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            VERSION="${{ github.event.inputs.version }}"
           else
-            VERSION=$(curl -sSfL "https://api.github.com/repos/turbot/guardrails-cli/releases/latest" | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            VERSION=$(gh api repos/turbot/guardrails-cli/releases/latest --jq '.tag_name')
           fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Testing version: $VERSION"
 
       - name: Test install script (Linux/macOS)
