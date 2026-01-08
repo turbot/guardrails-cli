@@ -131,6 +131,10 @@ install_turbot_cli() {
     while [ $# -gt 0 ]; do
         case "$1" in
             -b)
+                if [ -z "$2" ] || [ "${2#-}" != "$2" ]; then
+                    echo "Error: -b requires a directory argument." 1>&2
+                    usage
+                fi
                 BINDIR="$2"
                 shift 2
                 ;;
@@ -189,20 +193,26 @@ install_turbot_cli() {
     echo "Extracting archive..."
     unzip -q "$ARCHIVE_PATH" -d "$TMP_DIR"
 
+    # Determine the installed binary name (preserve .exe on Windows)
+    if [ "$OS" = "windows" ]; then
+        INSTALLED_BINARY="${BINARY_NAME}.exe"
+    else
+        INSTALLED_BINARY="${BINARY_NAME}"
+    fi
+
     # Install the binary
-    echo "Installing to ${BINDIR}/${BINARY_NAME}..."
+    echo "Installing to ${BINDIR}/${INSTALLED_BINARY}..."
     install -d "$BINDIR"
-    install "${TMP_DIR}/${BINARY_INSIDE}" "${BINDIR}/${BINARY_NAME}"
-    chmod +x "${BINDIR}/${BINARY_NAME}"
+    install -m 755 "${TMP_DIR}/${BINARY_INSIDE}" "${BINDIR}/${INSTALLED_BINARY}"
 
     echo ""
-    echo "Turbot CLI was installed successfully to ${BINDIR}/${BINARY_NAME}"
+    echo "Turbot CLI was installed successfully to ${BINDIR}/${INSTALLED_BINARY}"
 
     # Verify installation
-    if command_exists "${BINDIR}/${BINARY_NAME}"; then
-        echo "Run '${BINARY_NAME} --help' to get started."
+    if command_exists "${BINDIR}/${INSTALLED_BINARY}"; then
+        echo "Run '${INSTALLED_BINARY} --help' to get started."
     else
-        echo "Warning: Turbot CLI was installed, but '${BINDIR}/${BINARY_NAME}' is not in your PATH." 1>&2
+        echo "Warning: Turbot CLI was installed, but '${BINDIR}/${INSTALLED_BINARY}' is not in your PATH." 1>&2
         echo "Add '${BINDIR}' to your PATH or use the full path to run the CLI." 1>&2
     fi
 }
