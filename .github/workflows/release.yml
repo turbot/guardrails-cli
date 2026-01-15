@@ -244,18 +244,25 @@ jobs:
 
           mkdir -p dist
 
+          # Determine binary names based on platform (Windows requires .exe extension for caxa)
+          if [[ "$PLATFORM" == "windows" ]]; then
+            INTERNAL_BINARY="turbot-internal.exe"
+            FINAL_BINARY="turbot.exe"
+          else
+            INTERNAL_BINARY="turbot-internal"
+            FINAL_BINARY="turbot"
+          fi
+
           # Build with caxa - create internal binary first
           echo "🔨 Building ${PLATFORM} binary..."
           caxa \
             --input "$STAGING_DIR" \
-            --output "dist/turbot-internal" \
+            --output "dist/$INTERNAL_BINARY" \
             --no-dedupe \
             -- "{{caxa}}/node" "{{caxa}}/bootstrap-launcher.js"
 
           # Determine final binary name based on platform
           if [[ "$PLATFORM" == "windows" ]]; then
-            FINAL_BINARY="turbot.exe"
-            INTERNAL_BINARY="turbot-internal"
             # For Windows, we'll use the caxa binary directly (no wrapper for now)
             mv "dist/$INTERNAL_BINARY" "dist/$FINAL_BINARY"
           else
@@ -371,7 +378,7 @@ jobs:
           else
             FINAL_BINARY="turbot"
           fi
-          
+
           if [ -f "dist/$FINAL_BINARY" ]; then
             SIZE=$(du -h "dist/$FINAL_BINARY" | cut -f1)
             echo "✅ Binary verified: $FINAL_BINARY ($SIZE)"
