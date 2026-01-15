@@ -61,10 +61,9 @@ jobs:
         run: chmod +x compile-caxa.sh
         working-directory: lib/@turbot/cli
 
-      - name: Modify compile-caxa.sh for cross-platform builds
+      - name: Create cross-platform build script
         shell: bash
         run: |
-          # Create a modified version that builds for the current platform
           cat > compile-caxa-ci.sh << 'SCRIPT_END'
           #!/bin/bash
           set -e
@@ -169,7 +168,6 @@ jobs:
               mkdir -p "$STAGING_DIR/node_modules/@turbot/$pkg"
               
               if command -v rsync &> /dev/null; then
-                # rsync with -L to follow symlinks
                 rsync -aL \
                   --exclude 'node_modules' \
                   --exclude '.git' \
@@ -179,7 +177,6 @@ jobs:
                   --exclude '__tests__' \
                   "../../../lib/@turbot/$pkg/" "$STAGING_DIR/node_modules/@turbot/$pkg/"
               else
-                # Use tar to copy and follow symlinks - works better on Windows
                 (cd "../../../lib/@turbot/$pkg" && \
                   tar -ch \
                     --exclude='node_modules' \
@@ -195,7 +192,7 @@ jobs:
           done
 
           # Create bootstrap script
-          cat > "$STAGING_DIR/bootstrap.js" << 'EOF'
+          cat > "$STAGING_DIR/bootstrap.js" << 'BOOTSTRAP_EOF'
           const path = require("path");
           const Module = require("module");
 
@@ -222,10 +219,10 @@ jobs:
 
           process.argv[1] = "turbot";
           require("./turbot.js");
-          EOF
+          BOOTSTRAP_EOF
 
           # Create launcher
-          cat > "$STAGING_DIR/bootstrap-launcher.js" << 'EOF'
+          cat > "$STAGING_DIR/bootstrap-launcher.js" << 'LAUNCHER_EOF'
           const os = require("os");
           const path = require("path");
           const fs = require("fs");
@@ -243,7 +240,7 @@ jobs:
           process.env.CAXA_TMPDIR = cacheDir;
 
           require("./bootstrap.js");
-          EOF
+          LAUNCHER_EOF
 
           mkdir -p dist
 
@@ -260,7 +257,6 @@ jobs:
             FINAL_BINARY="turbot.exe"
             INTERNAL_BINARY="turbot-internal"
             # For Windows, we'll use the caxa binary directly (no wrapper for now)
-            # Windows doesn't easily support shell script wrappers
             mv "dist/$INTERNAL_BINARY" "dist/$FINAL_BINARY"
           else
             FINAL_BINARY="turbot"
@@ -268,60 +264,60 @@ jobs:
             
             # Create self-extracting wrapper script
             cat > "dist/$FINAL_BINARY" << 'WRAPPER_EOF'
-#!/bin/bash
-# Turbot CLI - self-extracting wrapper that ensures stable cache directory
-# This prevents macOS from cleaning up extracted files in system temp directories
+          #!/bin/bash
+          # Turbot CLI - self-extracting wrapper that ensures stable cache directory
+          # This prevents macOS from cleaning up extracted files in system temp directories
 
-set -e
+          set -e
 
-# Determine cache directory based on OS
-if [[ "$OSTYPE" == "darwin"* ]] || [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  CACHE_DIR="${HOME}/.cache/turbot-cli"
-elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
-  CACHE_DIR="${LOCALAPPDATA:-${HOME}/AppData/Local}/TurbotCLI/cache"
-else
-  CACHE_DIR="${TMPDIR:-/tmp}/turbot-cli"
-fi
+          # Determine cache directory based on OS
+          if [[ "$OSTYPE" == "darwin"* ]] || [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            CACHE_DIR="${HOME}/.cache/turbot-cli"
+          elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
+            CACHE_DIR="${LOCALAPPDATA:-${HOME}/AppData/Local}/TurbotCLI/cache"
+          else
+            CACHE_DIR="${TMPDIR:-/tmp}/turbot-cli"
+          fi
 
-# Create cache directory
-mkdir -p "$CACHE_DIR" 2>/dev/null || {
-  CACHE_DIR="${TMPDIR:-/tmp}/turbot-cli-$$"
-  mkdir -p "$CACHE_DIR"
-}
+          # Create cache directory
+          mkdir -p "$CACHE_DIR" 2>/dev/null || {
+            CACHE_DIR="${TMPDIR:-/tmp}/turbot-cli-$$"
+            mkdir -p "$CACHE_DIR"
+          }
 
-# Set CAXA_TMPDIR BEFORE executing caxa binary (caxa extracts in Go stub before Node.js runs)
-export CAXA_TMPDIR="$CACHE_DIR"
+          # Set CAXA_TMPDIR BEFORE executing caxa binary (caxa extracts in Go stub before Node.js runs)
+          export CAXA_TMPDIR="$CACHE_DIR"
 
-# Path to extracted binary in cache
-BINARY_CACHE_PATH="$CACHE_DIR/turbot-internal"
+          # Path to extracted binary in cache
+          BINARY_CACHE_PATH="$CACHE_DIR/turbot-internal"
 
-# Extract embedded binary on first run
-if [[ ! -f "$BINARY_CACHE_PATH" ]] || [[ "$0" -nt "$BINARY_CACHE_PATH" ]]; then
-  # Find the line number where binary data starts
-  BINARY_START_LINE=$(awk '/^__BINARY_START__$/ {print NR+1; exit}' "$0")
-  if [[ -n "$BINARY_START_LINE" ]]; then
-    # Extract and decode the embedded binary
-    # Use -D flag for macOS compatibility (both -d and -D work, but -D is more explicit on macOS)
-    tail -n +$BINARY_START_LINE "$0" | base64 -D > "$BINARY_CACHE_PATH" 2>/dev/null || \
-    tail -n +$BINARY_START_LINE "$0" | base64 -d > "$BINARY_CACHE_PATH" 2>/dev/null
-    chmod +x "$BINARY_CACHE_PATH"
-  fi
-fi
+          # Extract embedded binary on first run
+          if [[ ! -f "$BINARY_CACHE_PATH" ]] || [[ "$0" -nt "$BINARY_CACHE_PATH" ]]; then
+            # Find the line number where binary data starts
+            BINARY_START_LINE=$(awk '/^__BINARY_START__$/ {print NR+1; exit}' "$0")
+            if [[ -n "$BINARY_START_LINE" ]]; then
+              # Extract and decode the embedded binary
+              # Use -D flag for macOS compatibility (both -d and -D work, but -D is more explicit on macOS)
+              tail -n +$BINARY_START_LINE "$0" | base64 -D > "$BINARY_CACHE_PATH" 2>/dev/null || \
+              tail -n +$BINARY_START_LINE "$0" | base64 -d > "$BINARY_CACHE_PATH" 2>/dev/null
+              chmod +x "$BINARY_CACHE_PATH"
+            fi
+          fi
 
-# Run the extracted binary
-if [[ -f "$BINARY_CACHE_PATH" ]]; then
-  exec "$BINARY_CACHE_PATH" "$@"
-else
-  echo "Error: Failed to extract turbot CLI binary" >&2
-  exit 1
-fi
+          # Run the extracted binary
+          if [[ -f "$BINARY_CACHE_PATH" ]]; then
+            exec "$BINARY_CACHE_PATH" "$@"
+          else
+            echo "Error: Failed to extract turbot CLI binary" >&2
+            exit 1
+          fi
 
-# Binary data follows (base64 encoded)
-__BINARY_START__
-WRAPPER_EOF
+          # Binary data follows (base64 encoded)
+          __BINARY_START__
+          WRAPPER_EOF
 
             # Append base64-encoded binary to the wrapper script
-            # Use stdin redirection for cross-platform compatibility (macOS base64 uses -i flag)
+            # Use stdin redirection for cross-platform compatibility
             base64 < "dist/$INTERNAL_BINARY" >> "dist/$FINAL_BINARY"
             chmod +x "dist/$FINAL_BINARY"
             
