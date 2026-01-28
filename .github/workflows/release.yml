@@ -21,15 +21,12 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             arch: amd64
-            binary_name: turbot-linux-amd64
           - os: windows-latest
             platform: windows
             arch: amd64
-            binary_name: turbot-windows-amd64.exe
           - os: macos-latest
             platform: macos
             arch: amd64
-            binary_name: turbot-macos-amd64
 
     steps:
       - name: Configure Git for Windows
@@ -64,10 +61,9 @@ jobs:
         run: chmod +x compile-caxa.sh
         working-directory: lib/@turbot/cli
 
-      - name: Modify compile-caxa.sh for cross-platform builds
+      - name: Create cross-platform build script
         shell: bash
         run: |
-          # Create a modified version that builds for the current platform
           cat > compile-caxa-ci.sh << 'SCRIPT_END'
           #!/bin/bash
           set -e
@@ -76,7 +72,6 @@ jobs:
 
           PACKAGE_VERSION="${{ github.event.inputs.releaseVersion }}"
           PLATFORM="${{ matrix.platform }}"
-          BINARY_NAME="${{ matrix.binary_name }}"
 
           # Create staging directory
           STAGING_DIR=".staging-caxa"
@@ -173,7 +168,6 @@ jobs:
               mkdir -p "$STAGING_DIR/node_modules/@turbot/$pkg"
               
               if command -v rsync &> /dev/null; then
-                # rsync with -L to follow symlinks
                 rsync -aL \
                   --exclude 'node_modules' \
                   --exclude '.git' \
@@ -183,7 +177,6 @@ jobs:
                   --exclude '__tests__' \
                   "../../../lib/@turbot/$pkg/" "$STAGING_DIR/node_modules/@turbot/$pkg/"
               else
-                # Use tar to copy and follow symlinks - works better on Windows
                 (cd "../../../lib/@turbot/$pkg" && \
                   tar -ch \
                     --exclude='node_modules' \
@@ -199,7 +192,7 @@ jobs:
           done
 
           # Create bootstrap script
-          cat > "$STAGING_DIR/bootstrap.js" << 'EOF'
+          cat > "$STAGING_DIR/bootstrap.js" << 'BOOTSTRAP_EOF'
           const path = require("path");
           const Module = require("module");
 
@@ -226,10 +219,10 @@ jobs:
 
           process.argv[1] = "turbot";
           require("./turbot.js");
-          EOF
+          BOOTSTRAP_EOF
 
           # Create launcher
-          cat > "$STAGING_DIR/bootstrap-launcher.js" << 'EOF'
+          cat > "$STAGING_DIR/bootstrap-launcher.js" << 'LAUNCHER_EOF'
           const os = require("os");
           const path = require("path");
           const fs = require("fs");
@@ -247,38 +240,118 @@ jobs:
           process.env.CAXA_TMPDIR = cacheDir;
 
           require("./bootstrap.js");
-          EOF
+          LAUNCHER_EOF
 
           mkdir -p dist
 
-          # Build with caxa
+          # Determine binary names based on platform (Windows requires .exe extension for caxa)
+          if [[ "$PLATFORM" == "windows" ]]; then
+            INTERNAL_BINARY="turbot-internal.exe"
+            FINAL_BINARY="turbot.exe"
+          else
+            INTERNAL_BINARY="turbot-internal"
+            FINAL_BINARY="turbot"
+          fi
+
+          # Build with caxa - create internal binary first
           echo "🔨 Building ${PLATFORM} binary..."
           caxa \
             --input "$STAGING_DIR" \
-            --output "dist/$BINARY_NAME" \
+            --output "dist/$INTERNAL_BINARY" \
             --no-dedupe \
             -- "{{caxa}}/node" "{{caxa}}/bootstrap-launcher.js"
 
-          echo "✅ ${PLATFORM} binary created: dist/$BINARY_NAME"
+          # Determine final binary name based on platform
+          if [[ "$PLATFORM" == "windows" ]]; then
+            # For Windows, we'll use the caxa binary directly (no wrapper for now)
+            mv "dist/$INTERNAL_BINARY" "dist/$FINAL_BINARY"
+          else
+            FINAL_BINARY="turbot"
+            INTERNAL_BINARY="turbot-internal"
+            
+            # Create self-extracting wrapper script
+            cat > "dist/$FINAL_BINARY" << 'WRAPPER_EOF'
+          #!/bin/bash
+          # Turbot CLI - self-extracting wrapper that ensures stable cache directory
+          # This prevents macOS from cleaning up extracted files in system temp directories
+
+          set -e
+
+          # Determine cache directory based on OS
+          if [[ "$OSTYPE" == "darwin"* ]] || [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            CACHE_DIR="${HOME}/.cache/turbot-cli"
+          elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
+            CACHE_DIR="${LOCALAPPDATA:-${HOME}/AppData/Local}/TurbotCLI/cache"
+          else
+            CACHE_DIR="${TMPDIR:-/tmp}/turbot-cli"
+          fi
+
+          # Create cache directory
+          mkdir -p "$CACHE_DIR" 2>/dev/null || {
+            CACHE_DIR="${TMPDIR:-/tmp}/turbot-cli-$$"
+            mkdir -p "$CACHE_DIR"
+          }
+
+          # Set CAXA_TMPDIR BEFORE executing caxa binary (caxa extracts in Go stub before Node.js runs)
+          export CAXA_TMPDIR="$CACHE_DIR"
+
+          # Path to extracted binary in cache
+          BINARY_CACHE_PATH="$CACHE_DIR/turbot-internal"
+
+          # Extract embedded binary on first run
+          if [[ ! -f "$BINARY_CACHE_PATH" ]] || [[ "$0" -nt "$BINARY_CACHE_PATH" ]]; then
+            # Find the line number where binary data starts
+            BINARY_START_LINE=$(awk '/^__BINARY_START__$/ {print NR+1; exit}' "$0")
+            if [[ -n "$BINARY_START_LINE" ]]; then
+              # Extract and decode the embedded binary
+              # Use -D flag for macOS compatibility (both -d and -D work, but -D is more explicit on macOS)
+              tail -n +$BINARY_START_LINE "$0" | base64 -D > "$BINARY_CACHE_PATH" 2>/dev/null || \
+              tail -n +$BINARY_START_LINE "$0" | base64 -d > "$BINARY_CACHE_PATH" 2>/dev/null
+              chmod +x "$BINARY_CACHE_PATH"
+            fi
+          fi
+
+          # Run the extracted binary
+          if [[ -f "$BINARY_CACHE_PATH" ]]; then
+            exec "$BINARY_CACHE_PATH" "$@"
+          else
+            echo "Error: Failed to extract turbot CLI binary" >&2
+            exit 1
+          fi
+
+          # Binary data follows (base64 encoded)
+          __BINARY_START__
+          WRAPPER_EOF
+
+            # Append base64-encoded binary to the wrapper script
+            # Use stdin redirection for cross-platform compatibility
+            base64 < "dist/$INTERNAL_BINARY" >> "dist/$FINAL_BINARY"
+            chmod +x "dist/$FINAL_BINARY"
+            
+            # Clean up internal binary (no longer needed, it's embedded)
+            rm -f "dist/$INTERNAL_BINARY"
+          fi
+
+          echo "✅ ${PLATFORM} binary created: dist/$FINAL_BINARY"
 
           # Create archive based on platform
           cd dist
           if [[ "$PLATFORM" == "linux" ]]; then
-            zip "turbot_cli_${PACKAGE_VERSION}_linux_${{ matrix.arch }}.zip" "$BINARY_NAME"
+            zip "turbot_cli_${PACKAGE_VERSION}_linux_${{ matrix.arch }}.zip" "$FINAL_BINARY"
             echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_linux_${{ matrix.arch }}.zip"
           elif [[ "$PLATFORM" == "windows" ]]; then
             # Use 7z on Windows (available by default on GitHub runners)
             if command -v 7z &> /dev/null; then
-              7z a -tzip "turbot_cli_${PACKAGE_VERSION}_windows_${{ matrix.arch }}.zip" "$BINARY_NAME"
+              7z a -tzip "turbot_cli_${PACKAGE_VERSION}_windows_${{ matrix.arch }}.zip" "$FINAL_BINARY"
             elif command -v zip &> /dev/null; then
-              zip "turbot_cli_${PACKAGE_VERSION}_windows_${{ matrix.arch }}.zip" "$BINARY_NAME"
+              zip "turbot_cli_${PACKAGE_VERSION}_windows_${{ matrix.arch }}.zip" "$FINAL_BINARY"
             else
               echo "⚠️  Warning: Neither 7z nor zip found, skipping archive creation"
             fi
             echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_windows_${{ matrix.arch }}.zip"
           else
             # macOS - use zip
-            zip "turbot_cli_${PACKAGE_VERSION}_darwin_${{ matrix.arch }}.zip" "$BINARY_NAME"
+            zip "turbot_cli_${PACKAGE_VERSION}_darwin_${{ matrix.arch }}.zip" "$FINAL_BINARY"
             echo "✅ Archive: turbot_cli_${PACKAGE_VERSION}_darwin_${{ matrix.arch }}.zip"
           fi
           cd ..
@@ -299,12 +372,19 @@ jobs:
       - name: Verify binary was created
         shell: bash
         run: |
-          if [ -f "dist/${{ matrix.binary_name }}" ]; then
-            SIZE=$(du -h "dist/${{ matrix.binary_name }}" | cut -f1)
-            echo "✅ Binary verified: ${{ matrix.binary_name }} ($SIZE)"
+          # Determine final binary name
+          if [[ "${{ matrix.platform }}" == "windows" ]]; then
+            FINAL_BINARY="turbot.exe"
+          else
+            FINAL_BINARY="turbot"
+          fi
+
+          if [ -f "dist/$FINAL_BINARY" ]; then
+            SIZE=$(du -h "dist/$FINAL_BINARY" | cut -f1)
+            echo "✅ Binary verified: $FINAL_BINARY ($SIZE)"
             ls -lh dist/
           else
-            echo "❌ Binary not found: dist/${{ matrix.binary_name }}"
+            echo "❌ Binary not found: dist/$FINAL_BINARY"
             exit 1
           fi
         working-directory: lib/@turbot/cli
@@ -313,7 +393,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: turbot-cli-${{ matrix.platform }}-${{ matrix.arch }}-binary
-          path: lib/@turbot/cli/dist/${{ matrix.binary_name }}
+          path: lib/@turbot/cli/dist/turbot*
           retention-days: 30
 
       - name: Upload archive artifact
@@ -333,15 +413,12 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             arch: amd64
-            binary_name: turbot-linux-amd64
           - os: windows-latest
             platform: windows
             arch: amd64
-            binary_name: turbot-windows-amd64.exe
           - os: macos-latest
             platform: macos
             arch: amd64
-            binary_name: turbot-macos-amd64
 
     steps:
       - name: Download binary artifact
@@ -352,28 +429,46 @@ jobs:
 
       - name: Make binary executable (Unix)
         if: runner.os != 'Windows'
-        run: chmod +x ${{ matrix.binary_name }}
+        run: |
+          if [ -f "turbot" ]; then
+            chmod +x turbot
+          fi
 
       - name: Test binary - version check
         shell: bash
         run: |
-          echo "Testing ${{ matrix.binary_name }}..."
-          ./${{ matrix.binary_name }} --version || true
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            BINARY="turbot.exe"
+          else
+            BINARY="turbot"
+          fi
+          echo "Testing $BINARY..."
+          ./$BINARY --version || true
           echo "✅ Binary executed successfully"
 
       - name: Test binary - help command
         shell: bash
         run: |
-          ./${{ matrix.binary_name }} --help || true
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            BINARY="turbot.exe"
+          else
+            BINARY="turbot"
+          fi
+          ./$BINARY --help || true
           echo "✅ Help command executed"
 
       - name: Test binary - basic commands (if applicable)
         shell: bash
         continue-on-error: true
         run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            BINARY="turbot.exe"
+          else
+            BINARY="turbot"
+          fi
           # Add any other basic CLI commands you want to test
           # These should not require authentication or external services
-          ./${{ matrix.binary_name }} || true
+          ./$BINARY || true
 
   create-release:
     name: Create GitHub Release
@@ -408,7 +503,7 @@ jobs:
             - **guardrails-cli branch**: `${{ github.ref_name }}`
 
             ### Downloads
-            - **Linux (amd64)**: `turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.tar.gz`
+            - **Linux (amd64)**: `turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip`
             - **macOS (amd64)**: `turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_amd64.zip`
             - **Windows (amd64)**: `turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip`
 
@@ -417,11 +512,11 @@ jobs:
             #### Linux/macOS
             ```bash
             # Extract the archive
-            tar -xzf turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.tar.gz  # Linux
+            unzip turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip  # Linux
             unzip turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_amd64.zip      # macOS
 
             # Move to PATH
-            sudo mv turbot-* /usr/local/bin/turbot
+            sudo mv turbot /usr/local/bin/turbot
             sudo chmod +x /usr/local/bin/turbot
             ```
 
