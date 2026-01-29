@@ -3,7 +3,6 @@ name: Release CLI (SEA)
 # This workflow uses Node.js SEA (Single Executable Applications) to build the CLI
 # It replaces the deprecated caxa-based build
 #
-# IMPORTANT: The turbotCoreBranch must have the compile-sea.sh script
 
 on:
   workflow_dispatch:
@@ -13,7 +12,7 @@ on:
         required: true
         default: "1.32.0-sea.1"
       turbotCoreBranch:
-        description: "The branch name from turbotio/turbot-core repo (must have compile-sea.sh)"
+        description: "The branch name from turbotio/turbot-core repo"
         required: true
         default: "develop"
 
@@ -77,11 +76,11 @@ jobs:
         shell: bash
         run: |
           if [[ ! -f "lib/@turbot/cli/compile-sea.sh" ]]; then
-            echo "❌ compile-sea.sh not found in branch ${{ github.event.inputs.turbotCoreBranch }}"
+            echo "ERROR: compile-sea.sh not found in branch ${{ github.event.inputs.turbotCoreBranch }}"
             echo "   Make sure the branch has the SEA build scripts"
             exit 1
           fi
-          echo "✅ compile-sea.sh found"
+          echo "OK: compile-sea.sh found"
 
       - name: Make build scripts executable
         shell: bash
@@ -100,10 +99,10 @@ jobs:
         run: |
           if [[ -f "lib/@turbot/cli/dist/${{ matrix.binary }}" ]]; then
             SIZE=$(du -h "lib/@turbot/cli/dist/${{ matrix.binary }}" | cut -f1)
-            echo "✅ Binary verified: ${{ matrix.binary }} ($SIZE)"
+            echo "OK: Binary verified: ${{ matrix.binary }} ($SIZE)"
             ls -lh lib/@turbot/cli/dist/
           else
-            echo "❌ Binary not found: lib/@turbot/cli/dist/${{ matrix.binary }}"
+            echo "ERROR: Binary not found: lib/@turbot/cli/dist/${{ matrix.binary }}"
             ls -lh lib/@turbot/cli/dist/ 2>/dev/null || echo "dist/ directory not found"
             exit 1
           fi
@@ -127,7 +126,7 @@ jobs:
         shell: bash
         run: |
           echo "$(git rev-parse --short HEAD)" > lib/@turbot/cli/dist/commit.txt
-          echo "📌 Saved commit: $(cat lib/@turbot/cli/dist/commit.txt)"
+          echo "Saved commit: $(cat lib/@turbot/cli/dist/commit.txt)"
 
       - name: Upload build info
         if: matrix.platform == 'linux-x64'
@@ -173,14 +172,14 @@ jobs:
         run: |
           echo "Testing ${{ matrix.binary }} --version..."
           ./${{ matrix.binary }} --version
-          echo "✅ Version check passed"
+          echo "OK: Version check passed"
 
       - name: Test --help
         shell: bash
         run: |
           echo "Testing ${{ matrix.binary }} --help..."
           ./${{ matrix.binary }} --help | head -20
-          echo "✅ Help check passed"
+          echo "OK: Help check passed"
 
   create-release:
     name: Create GitHub Release
@@ -199,7 +198,7 @@ jobs:
 
       - name: Display artifact structure
         run: |
-          echo "📦 Downloaded artifacts:"
+          echo "Downloaded artifacts:"
           ls -R artifacts/
 
       - name: Read build info
@@ -207,14 +206,14 @@ jobs:
         run: |
           COMMIT_SHA=$(cat artifacts/build-info/commit.txt)
           echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
-          echo "📌 turbot-core commit: $COMMIT_SHA"
+          echo "turbot-core commit: $COMMIT_SHA"
 
       - name: Prepare release files
         run: |
           mkdir -p release
           # Copy zip files for release
           find artifacts -name "*.zip" -exec cp {} release/ \;
-          echo "📦 Release files:"
+          echo "Release files:"
           ls -lh release/
 
       - name: Create Release
@@ -296,7 +295,7 @@ jobs:
     steps:
       - name: Generate summary
         run: |
-          echo "## 🎉 CLI Build Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "## CLI Build Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Build Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **Release Version**: v${{ github.event.inputs.releaseVersion }}" >> $GITHUB_STEP_SUMMARY
@@ -307,10 +306,10 @@ jobs:
           echo "### Platform Binaries" >> $GITHUB_STEP_SUMMARY
           echo "| Platform | Architecture | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux | x64 | ✅ |" >> $GITHUB_STEP_SUMMARY
-          echo "| Windows | x64 | ✅ |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS | x64 (Intel) | ✅ |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS | arm64 (Apple Silicon) | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | x64 | OK |" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows | x64 | OK |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | x64 (Intel) | OK |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | arm64 (Apple Silicon) | OK |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Release" >> $GITHUB_STEP_SUMMARY
-          echo "🔗 [View Release](https://github.com/turbot/guardrails-cli/releases/tag/v${{ github.event.inputs.releaseVersion }})" >> $GITHUB_STEP_SUMMARY
+          echo "[View Release](https://github.com/turbot/guardrails-cli/releases/tag/v${{ github.event.inputs.releaseVersion }})" >> $GITHUB_STEP_SUMMARY
