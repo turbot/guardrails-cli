@@ -9,8 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       releaseVersion:
-        description: "The version number of the new release, without v (e.g., 3.0.0)"
+        description: "The version number of the new release, without v (e.g., 1.32.0)"
         required: true
+        default: "1.32.0-sea.1"
       turbotCoreBranch:
         description: "The branch name from turbotio/turbot-core repo (must have compile-sea.sh)"
         required: true
