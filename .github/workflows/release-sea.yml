@@ -73,18 +73,6 @@ jobs:
         shell: bash
         run: bash scripts/build-ts-modules.sh
 
-      - name: Update CLI version in package.json
-        shell: bash
-        run: |
-          cd lib/@turbot/cli
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.version = '${{ github.event.inputs.releaseVersion }}';
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-          echo "Updated CLI version to ${{ github.event.inputs.releaseVersion }}"
-
       - name: Verify compile-sea.sh exists
         shell: bash
         run: |
@@ -105,7 +93,7 @@ jobs:
         shell: bash
         run: |
           cd lib/@turbot/cli
-          ./compile-sea.sh ${{ matrix.platform }}
+          ./compile-sea.sh ${{ matrix.platform }} --version ${{ github.event.inputs.releaseVersion }}
 
       - name: Verify binary was created
         shell: bash
@@ -132,6 +120,21 @@ jobs:
         with:
           name: turbot-cli-${{ matrix.platform }}-archive
           path: lib/@turbot/cli/dist/turbot_cli_*_${{ matrix.archive }}.zip
+          retention-days: 30
+
+      - name: Save build info (once)
+        if: matrix.platform == 'linux-x64'
+        shell: bash
+        run: |
+          echo "$(git rev-parse --short HEAD)" > lib/@turbot/cli/dist/commit.txt
+          echo "📌 Saved commit: $(cat lib/@turbot/cli/dist/commit.txt)"
+
+      - name: Upload build info
+        if: matrix.platform == 'linux-x64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-info
+          path: lib/@turbot/cli/dist/commit.txt
           retention-days: 30
 
   test-binaries:
@@ -199,6 +202,13 @@ jobs:
           echo "📦 Downloaded artifacts:"
           ls -R artifacts/
 
+      - name: Read build info
+        id: build-info
+        run: |
+          COMMIT_SHA=$(cat artifacts/build-info/commit.txt)
+          echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
+          echo "📌 turbot-core commit: $COMMIT_SHA"
+
       - name: Prepare release files
         run: |
           mkdir -p release
@@ -219,6 +229,7 @@ jobs:
 
             ### Source
             - **turbot-core branch**: `${{ github.event.inputs.turbotCoreBranch }}`
+            - **turbot-core commit**: `${{ steps.build-info.outputs.commit_sha }}`
             - **Node.js version**: ${{ env.NODE_VERSION }}
 
             ### Downloads
@@ -267,11 +278,9 @@ jobs:
             5. Run `turbot --version` to verify
 
             ### Notes
-            - First run extracts CLI to cache directory (~2-3 seconds)
-            - Subsequent runs use cached extraction (instant startup)
-            - Cache location:
-              - Linux/macOS: `~/.cache/turbot-cli-sea/${{ github.event.inputs.releaseVersion }}/`
-              - Windows: `%LOCALAPPDATA%\turbot-cli-sea\${{ github.event.inputs.releaseVersion }}\`
+            - Built using webpack bundling for optimal size and performance
+            - No extraction required - instant startup on all platforms
+            - Single self-contained binary with all dependencies embedded
 
           files: release/*
           draft: false
