@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       releaseVersion:
-        description: "The version number of the new release (e.g., 1.2.3)"
+        description: "The version number of the new release, without v (e.g., 3.0.0)"
         required: true
       turbotCoreBranch:
         description: "The branch name from turbotio/turbot-core repo (must have compile-sea.sh)"
@@ -34,7 +34,7 @@ jobs:
             platform: windows-x64
             binary: turbot-windows-x64.exe
             archive: windows_amd64
-          - os: macos-13
+          - os: macos-15-intel
             platform: darwin-x64
             binary: turbot-macos-x64
             archive: darwin_amd64
@@ -145,7 +145,7 @@ jobs:
           - os: windows-latest
             platform: windows-x64
             binary: turbot-windows-x64.exe
-          - os: macos-13
+          - os: macos-15-intel
             platform: darwin-x64
             binary: turbot-macos-x64
           - os: macos-latest
