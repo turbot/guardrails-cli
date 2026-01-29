@@ -71,7 +71,7 @@ jobs:
 
       - name: Build TypeScript packages
         shell: bash
-        run: npm run build:ts
+        run: bash scripts/build-ts-modules.sh
 
       - name: Update CLI version in package.json
         shell: bash
