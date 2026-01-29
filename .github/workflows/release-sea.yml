@@ -70,6 +70,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Build TypeScript packages
+        shell: bash
         run: npm run build:ts
 
       - name: Update CLI version in package.json
