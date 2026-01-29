@@ -165,13 +165,13 @@ install_turbot_cli() {
     # Determine binary name inside the archive based on OS
     case "$OS" in
         darwin)
-            BINARY_INSIDE="turbot-macos-amd64"
+            BINARY_INSIDE="turbot"
             ;;
         linux)
-            BINARY_INSIDE="turbot-linux-amd64"
+            BINARY_INSIDE="turbot"
             ;;
         windows)
-            BINARY_INSIDE="turbot-windows-amd64.exe"
+            BINARY_INSIDE="turbot.exe"
             ;;
     esac
 
