@@ -53,6 +53,30 @@ jobs:
       - name: Install dependencies in turbot-core monorepo
         run: npm ci
 
+      - name: Build TypeScript packages
+        run: npm run build:ts
+
+      - name: Verify TypeScript build output
+        shell: bash
+        run: |
+          echo "🔍 Verifying TypeScript packages have dist/ directories..."
+          TS_PACKAGES=(compose flags internal-utils locks memory-cache validator)
+          MISSING=()
+          for pkg in "${TS_PACKAGES[@]}"; do
+            if [[ -d "lib/@turbot/$pkg/dist" ]]; then
+              echo "✅ @turbot/$pkg/dist exists"
+              ls -la "lib/@turbot/$pkg/dist/" | head -5
+            else
+              echo "❌ @turbot/$pkg/dist MISSING"
+              MISSING+=("$pkg")
+            fi
+          done
+          if [[ ${#MISSING[@]} -gt 0 ]]; then
+            echo "::error::TypeScript build failed - missing dist for: ${MISSING[*]}"
+            exit 1
+          fi
+          echo "✅ All TypeScript packages built successfully"
+
       - name: Install caxa globally
         run: npm install -g caxa
 
@@ -161,17 +185,21 @@ jobs:
 
           mkdir -p "$STAGING_DIR/node_modules/@turbot"
 
+          # TypeScript packages that need dist/ directory
+          TS_PACKAGES="compose flags internal-utils locks memory-cache validator"
+
           for pkg in "${local_packages[@]}"; do
             if [[ -d ../../../lib/@turbot/$pkg ]]; then
               echo "📦 Bundling @turbot/$pkg"
               rm -rf "$STAGING_DIR/node_modules/@turbot/$pkg"
               mkdir -p "$STAGING_DIR/node_modules/@turbot/$pkg"
-              
+
               if command -v rsync &> /dev/null; then
                 rsync -aL \
                   --exclude 'node_modules' \
                   --exclude '.git' \
-                  --exclude 'dist' \
+                  --exclude 'src' \
+                  --exclude '*.ts' \
                   --exclude 'test' \
                   --exclude 'tests' \
                   --exclude '__tests__' \
@@ -181,12 +209,22 @@ jobs:
                   tar -ch \
                     --exclude='node_modules' \
                     --exclude='.git' \
-                    --exclude='dist' \
+                    --exclude='src' \
+                    --exclude='*.ts' \
                     --exclude='test' \
                     --exclude='tests' \
                     --exclude='__tests__' \
                     -f - .) | \
                   (cd "$STAGING_DIR/node_modules/@turbot/$pkg" && tar -xf -)
+              fi
+
+              # Verify TypeScript packages have dist/ included
+              if [[ " $TS_PACKAGES " =~ " $pkg " ]]; then
+                if [[ -d "$STAGING_DIR/node_modules/@turbot/$pkg/dist" ]]; then
+                  echo "  ✅ dist/ included for TypeScript package @turbot/$pkg"
+                else
+                  echo "  ❌ WARNING: dist/ missing for TypeScript package @turbot/$pkg"
+                fi
               fi
             fi
           done
