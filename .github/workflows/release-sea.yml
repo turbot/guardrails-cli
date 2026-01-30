@@ -14,7 +14,7 @@ on:
       turbotCoreBranch:
         description: "The branch name from turbotio/turbot-core repo"
         required: true
-        default: "develop"
+        default: "invalid"
 
 env:
   NODE_VERSION: "22"
@@ -242,10 +242,21 @@ jobs:
 
             ### Quick Install
 
-            **macOS / Linux:**
+            **macOS:**
             ```bash
-            # Download (replace PLATFORM with: darwin_arm64, darwin_amd64, or linux_amd64)
+            # Download (replace PLATFORM with: darwin_arm64 or darwin_amd64)
             curl -L -o turbot.zip "https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_PLATFORM.zip"
+            unzip turbot.zip
+            sudo mv turbot /usr/local/bin/turbot
+            chmod +x /usr/local/bin/turbot
+            turbot --version
+            ```
+
+            > **Note:** If you downloaded via browser instead of curl, run `xattr -cr turbot` before moving it.
+
+            **Linux:**
+            ```bash
+            curl -L -o turbot.zip "https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip"
             unzip turbot.zip
             sudo mv turbot /usr/local/bin/turbot
             chmod +x /usr/local/bin/turbot
