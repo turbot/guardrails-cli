@@ -28,19 +28,19 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux-x64
-            binary: turbot-linux-x64
+            binary: turbot
             archive: linux_amd64
           - os: windows-latest
             platform: windows-x64
-            binary: turbot-windows-x64.exe
+            binary: turbot.exe
             archive: windows_amd64
           - os: macos-15-intel
             platform: darwin-x64
-            binary: turbot-macos-x64
+            binary: turbot
             archive: darwin_amd64
           - os: macos-latest
             platform: darwin-arm64
-            binary: turbot-macos-arm64
+            binary: turbot
             archive: darwin_arm64
 
     steps:
@@ -145,16 +145,16 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux-x64
-            binary: turbot-linux-x64
+            binary: turbot
           - os: windows-latest
             platform: windows-x64
-            binary: turbot-windows-x64.exe
+            binary: turbot.exe
           - os: macos-15-intel
             platform: darwin-x64
-            binary: turbot-macos-x64
+            binary: turbot
           - os: macos-latest
             platform: darwin-arm64
-            binary: turbot-macos-arm64
+            binary: turbot
 
     steps:
       - name: Download binary artifact
@@ -247,7 +247,7 @@ jobs:
             # Download (replace PLATFORM with: darwin_arm64, darwin_amd64, or linux_amd64)
             curl -L -o turbot.zip "https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_PLATFORM.zip"
             unzip turbot.zip
-            sudo mv turbot-* /usr/local/bin/turbot
+            sudo mv turbot /usr/local/bin/turbot
             chmod +x /usr/local/bin/turbot
             turbot --version
             ```
@@ -256,7 +256,6 @@ jobs:
             ```powershell
             Invoke-WebRequest -Uri "https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip" -OutFile turbot.zip
             Expand-Archive turbot.zip -DestinationPath .
-            Rename-Item turbot-windows-x64.exe turbot.exe
             # Add to PATH or move to a directory in your PATH
             .\turbot.exe --version
             ```
