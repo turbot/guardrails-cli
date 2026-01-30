@@ -3,18 +3,18 @@ name: Release CLI (SEA)
 # This workflow uses Node.js SEA (Single Executable Applications) to build the CLI
 # It replaces the deprecated caxa-based build
 #
-# IMPORTANT: The turbotCoreBranch must have the compile-sea.sh script
 
 on:
   workflow_dispatch:
     inputs:
       releaseVersion:
-        description: "The version number of the new release (e.g., 1.2.3)"
+        description: "The version number of the new release, without v (e.g., 1.32.0)"
         required: true
+        default: "1.32.0-sea.1"
       turbotCoreBranch:
-        description: "The branch name from turbotio/turbot-core repo (must have compile-sea.sh)"
+        description: "The branch name from turbotio/turbot-core repo"
         required: true
-        default: "develop"
+        default: "invalid"
 
 env:
   NODE_VERSION: "22"
@@ -28,19 +28,19 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux-x64
-            binary: turbot-linux-x64
+            binary: turbot
             archive: linux_amd64
           - os: windows-latest
             platform: windows-x64
-            binary: turbot-windows-x64.exe
+            binary: turbot.exe
             archive: windows_amd64
-          - os: macos-13
+          - os: macos-15-intel
             platform: darwin-x64
-            binary: turbot-macos-x64
+            binary: turbot
             archive: darwin_amd64
           - os: macos-latest
             platform: darwin-arm64
-            binary: turbot-macos-arm64
+            binary: turbot
             archive: darwin_arm64
 
     steps:
@@ -69,29 +69,18 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Build TypeScript packages
-        run: npm run build:ts
-
-      - name: Update CLI version in package.json
         shell: bash
-        run: |
-          cd lib/@turbot/cli
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.version = '${{ github.event.inputs.releaseVersion }}';
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-          echo "Updated CLI version to ${{ github.event.inputs.releaseVersion }}"
+        run: bash scripts/build-ts-modules.sh
 
       - name: Verify compile-sea.sh exists
         shell: bash
         run: |
           if [[ ! -f "lib/@turbot/cli/compile-sea.sh" ]]; then
-            echo "❌ compile-sea.sh not found in branch ${{ github.event.inputs.turbotCoreBranch }}"
+            echo "ERROR: compile-sea.sh not found in branch ${{ github.event.inputs.turbotCoreBranch }}"
             echo "   Make sure the branch has the SEA build scripts"
             exit 1
           fi
-          echo "✅ compile-sea.sh found"
+          echo "OK: compile-sea.sh found"
 
       - name: Make build scripts executable
         shell: bash
@@ -103,17 +92,17 @@ jobs:
         shell: bash
         run: |
           cd lib/@turbot/cli
-          ./compile-sea.sh ${{ matrix.platform }}
+          ./compile-sea.sh ${{ matrix.platform }} --version ${{ github.event.inputs.releaseVersion }}
 
       - name: Verify binary was created
         shell: bash
         run: |
           if [[ -f "lib/@turbot/cli/dist/${{ matrix.binary }}" ]]; then
             SIZE=$(du -h "lib/@turbot/cli/dist/${{ matrix.binary }}" | cut -f1)
-            echo "✅ Binary verified: ${{ matrix.binary }} ($SIZE)"
+            echo "OK: Binary verified: ${{ matrix.binary }} ($SIZE)"
             ls -lh lib/@turbot/cli/dist/
           else
-            echo "❌ Binary not found: lib/@turbot/cli/dist/${{ matrix.binary }}"
+            echo "ERROR: Binary not found: lib/@turbot/cli/dist/${{ matrix.binary }}"
             ls -lh lib/@turbot/cli/dist/ 2>/dev/null || echo "dist/ directory not found"
             exit 1
           fi
@@ -132,6 +121,21 @@ jobs:
           path: lib/@turbot/cli/dist/turbot_cli_*_${{ matrix.archive }}.zip
           retention-days: 30
 
+      - name: Save build info (once)
+        if: matrix.platform == 'linux-x64'
+        shell: bash
+        run: |
+          echo "$(git rev-parse --short HEAD)" > lib/@turbot/cli/dist/commit.txt
+          echo "Saved commit: $(cat lib/@turbot/cli/dist/commit.txt)"
+
+      - name: Upload build info
+        if: matrix.platform == 'linux-x64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-info
+          path: lib/@turbot/cli/dist/commit.txt
+          retention-days: 30
+
   test-binaries:
     name: Test ${{ matrix.platform }} Binary
     needs: build
@@ -141,16 +145,16 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux-x64
-            binary: turbot-linux-x64
+            binary: turbot
           - os: windows-latest
             platform: windows-x64
-            binary: turbot-windows-x64.exe
-          - os: macos-13
+            binary: turbot.exe
+          - os: macos-15-intel
             platform: darwin-x64
-            binary: turbot-macos-x64
+            binary: turbot
           - os: macos-latest
             platform: darwin-arm64
-            binary: turbot-macos-arm64
+            binary: turbot
 
     steps:
       - name: Download binary artifact
@@ -168,14 +172,14 @@ jobs:
         run: |
           echo "Testing ${{ matrix.binary }} --version..."
           ./${{ matrix.binary }} --version
-          echo "✅ Version check passed"
+          echo "OK: Version check passed"
 
       - name: Test --help
         shell: bash
         run: |
           echo "Testing ${{ matrix.binary }} --help..."
           ./${{ matrix.binary }} --help | head -20
-          echo "✅ Help check passed"
+          echo "OK: Help check passed"
 
   create-release:
     name: Create GitHub Release
@@ -194,84 +198,103 @@ jobs:
 
       - name: Display artifact structure
         run: |
-          echo "📦 Downloaded artifacts:"
+          echo "Downloaded artifacts:"
           ls -R artifacts/
+
+      - name: Read build info
+        id: build-info
+        run: |
+          COMMIT_SHA=$(cat artifacts/build-info/commit.txt)
+          echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
+          echo "turbot-core commit: $COMMIT_SHA"
 
       - name: Prepare release files
         run: |
           mkdir -p release
           # Copy zip files for release
           find artifacts -name "*.zip" -exec cp {} release/ \;
-          echo "📦 Release files:"
+          echo "Release files:"
           ls -lh release/
+
+      - name: Generate checksums
+        run: |
+          cd release
+          sha256sum *.zip > checksums.txt
+          echo "Checksums:"
+          cat checksums.txt
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ github.event.inputs.releaseVersion }}
-          name: Release v${{ github.event.inputs.releaseVersion }}
+          name: v${{ github.event.inputs.releaseVersion }}
           body: |
-            ## CLI Binary Release v${{ github.event.inputs.releaseVersion }}
-
-            Built using **Node.js SEA (Single Executable Applications)**.
-
-            ### Source
-            - **turbot-core branch**: `${{ github.event.inputs.turbotCoreBranch }}`
-            - **Node.js version**: ${{ env.NODE_VERSION }}
+            ## Turbot Guardrails CLI v${{ github.event.inputs.releaseVersion }}
 
             ### Downloads
 
-            | Platform | Architecture | File |
-            |----------|--------------|------|
-            | macOS | Apple Silicon (arm64) | `turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_arm64.zip` |
-            | macOS | Intel (x64) | `turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_amd64.zip` |
-            | Linux | x64 | `turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip` |
-            | Windows | x64 | `turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip` |
+            | Platform | Architecture | Download |
+            |----------|--------------|----------|
+            | macOS | Apple Silicon (arm64) | [`turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_arm64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_arm64.zip) |
+            | macOS | Intel (x64) | [`turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_amd64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_amd64.zip) |
+            | Linux | x64 | [`turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip) |
+            | Windows | x64 | [`turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip) |
 
-            ### Installation
+            ### Quick Install
 
-            #### Linux
+            **macOS:**
             ```bash
-            curl -L -o turbot.zip https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip
+            # Download (replace PLATFORM with: darwin_arm64 or darwin_amd64)
+            curl -L -o turbot.zip "https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_PLATFORM.zip"
             unzip turbot.zip
-            sudo mv turbot-linux-x64 /usr/local/bin/turbot
-            sudo chmod +x /usr/local/bin/turbot
+            sudo mv turbot /usr/local/bin/turbot
+            chmod +x /usr/local/bin/turbot
             turbot --version
             ```
 
-            #### macOS (Apple Silicon)
+            > **Note:** If you downloaded via browser instead of curl, run `xattr -cr turbot` before moving it.
+
+            **Linux:**
             ```bash
-            curl -L -o turbot.zip https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_arm64.zip
+            curl -L -o turbot.zip "https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip"
             unzip turbot.zip
-            sudo mv turbot-macos-arm64 /usr/local/bin/turbot
-            sudo chmod +x /usr/local/bin/turbot
+            sudo mv turbot /usr/local/bin/turbot
+            chmod +x /usr/local/bin/turbot
             turbot --version
             ```
 
-            #### macOS (Intel)
-            ```bash
-            curl -L -o turbot.zip https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_amd64.zip
-            unzip turbot.zip
-            sudo mv turbot-macos-x64 /usr/local/bin/turbot
-            sudo chmod +x /usr/local/bin/turbot
-            turbot --version
+            **Windows (PowerShell):**
+            ```powershell
+            Invoke-WebRequest -Uri "https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip" -OutFile turbot.zip
+            Expand-Archive turbot.zip -DestinationPath .
+            # Add to PATH or move to a directory in your PATH
+            .\turbot.exe --version
             ```
 
-            #### Windows
-            1. Download `turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip`
-            2. Extract to a directory (e.g., `C:\turbot`)
-            3. Rename `turbot-windows-x64.exe` to `turbot.exe`
-            4. Add the directory to your PATH
-            5. Run `turbot --version` to verify
+            ### Verify Download (Optional)
 
-            ### Notes
-            - First run extracts CLI to cache directory (~2-3 seconds)
-            - Subsequent runs use cached extraction (instant startup)
-            - Cache location:
-              - Linux/macOS: `~/.cache/turbot-cli-sea/${{ github.event.inputs.releaseVersion }}/`
-              - Windows: `%LOCALAPPDATA%\turbot-cli-sea\${{ github.event.inputs.releaseVersion }}\`
+            Compare the SHA256 checksum of your downloaded file against `checksums.txt`:
+            ```bash
+            sha256sum -c checksums.txt
+            ```
 
-          files: release/*
+            ---
+
+            <details>
+            <summary><b>Build Information</b></summary>
+
+            | Property | Value |
+            |----------|-------|
+            | turbot-core branch | `${{ github.event.inputs.turbotCoreBranch }}` |
+            | turbot-core commit | `${{ steps.build-info.outputs.commit_sha }}` |
+            | Node.js version | ${{ env.NODE_VERSION }} |
+            | Build method | Node.js SEA (Single Executable Applications) |
+
+            </details>
+
+          files: |
+            release/*.zip
+            release/checksums.txt
           draft: false
           prerelease: false
         env:
@@ -285,7 +308,7 @@ jobs:
     steps:
       - name: Generate summary
         run: |
-          echo "## 🎉 CLI Build Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "## CLI Build Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Build Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **Release Version**: v${{ github.event.inputs.releaseVersion }}" >> $GITHUB_STEP_SUMMARY
@@ -296,10 +319,10 @@ jobs:
           echo "### Platform Binaries" >> $GITHUB_STEP_SUMMARY
           echo "| Platform | Architecture | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux | x64 | ✅ |" >> $GITHUB_STEP_SUMMARY
-          echo "| Windows | x64 | ✅ |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS | x64 (Intel) | ✅ |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS | arm64 (Apple Silicon) | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | x64 | OK |" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows | x64 | OK |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | x64 (Intel) | OK |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | arm64 (Apple Silicon) | OK |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Release" >> $GITHUB_STEP_SUMMARY
-          echo "🔗 [View Release](https://github.com/turbot/guardrails-cli/releases/tag/v${{ github.event.inputs.releaseVersion }})" >> $GITHUB_STEP_SUMMARY
+          echo "[View Release](https://github.com/turbot/guardrails-cli/releases/tag/v${{ github.event.inputs.releaseVersion }})" >> $GITHUB_STEP_SUMMARY
