@@ -236,7 +236,19 @@ jobs:
           body: |
             ## Turbot Guardrails CLI v${{ github.event.inputs.releaseVersion }}
 
-            ### Downloads
+            ### Installation
+
+            **Homebrew (macOS & Linux):**
+            ```bash
+            brew install turbot/tap/guardrails-cli
+            ```
+
+            **Install Script (macOS & Linux):**
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/turbot/guardrails-cli/master/install.sh | sh
+            ```
+
+            ### Manual Download
 
             | Platform | Architecture | Download |
             |----------|--------------|----------|
@@ -245,35 +257,9 @@ jobs:
             | Linux | x64 | [`turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip) |
             | Windows | x64 | [`turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip) |
 
-            ### Quick Install
-
-            **macOS:**
+            **macOS Quarantine:** If you see a security warning, remove the quarantine attribute:
             ```bash
-            # Download (replace PLATFORM with: darwin_arm64 or darwin_amd64)
-            curl -L -o turbot.zip "https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_PLATFORM.zip"
-            unzip turbot.zip
-            sudo mv turbot /usr/local/bin/turbot
-            chmod +x /usr/local/bin/turbot
-            turbot --version
-            ```
-
-            > **Note:** If you downloaded via browser instead of curl, run `xattr -cr turbot` before moving it.
-
-            **Linux:**
-            ```bash
-            curl -L -o turbot.zip "https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip"
-            unzip turbot.zip
-            sudo mv turbot /usr/local/bin/turbot
-            chmod +x /usr/local/bin/turbot
-            turbot --version
-            ```
-
-            **Windows (PowerShell):**
-            ```powershell
-            Invoke-WebRequest -Uri "https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip" -OutFile turbot.zip
-            Expand-Archive turbot.zip -DestinationPath .
-            # Add to PATH or move to a directory in your PATH
-            .\turbot.exe --version
+            xattr -d com.apple.quarantine /usr/local/bin/turbot
             ```
 
             ### Verify Download (Optional)
