@@ -51,7 +51,7 @@ turbot --version
 ## License & Terms
 
 The Turbot Guardrails CLI is closed source, proprietary software. It may be [downloaded
-here](https://turbot.com/guardrails/docs/releases/cli#downloads) and is subject to the [LICENSE](./LICENSE).
+here](https://github.com/turbot/guardrails-cli/releases) and is subject to the [LICENSE](./LICENSE).
 
 Documentation and examples in this repository are available under the [Apache
 2.0 License](./LICENSE-DOCS).
