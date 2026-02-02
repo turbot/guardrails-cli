@@ -15,6 +15,11 @@ on:
         description: "The branch name from turbotio/turbot-core repo"
         required: true
         default: "invalid"
+      prerelease:
+        description: "Mark as pre-release (uncheck to create a full release)"
+        type: boolean
+        required: false
+        default: true
 
 env:
   NODE_VERSION: "22"
@@ -296,7 +301,7 @@ jobs:
             release/*.zip
             release/checksums.txt
           draft: false
-          prerelease: false
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
