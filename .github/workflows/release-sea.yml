@@ -21,6 +21,9 @@ on:
         required: false
         default: true
 
+permissions:
+  contents: write
+
 env:
   NODE_VERSION: "22"
 
@@ -57,7 +60,7 @@ jobs:
           git config --global core.longpaths true
 
       - name: Checkout turbot-core repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: turbotio/turbot-core
           ref: ${{ github.event.inputs.turbotCoreBranch }}
@@ -65,7 +68,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -113,14 +116,14 @@ jobs:
           fi
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: turbot-cli-${{ matrix.platform }}-binary
           path: lib/@turbot/cli/dist/${{ matrix.binary }}
           retention-days: 30
 
       - name: Upload archive artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: turbot-cli-${{ matrix.platform }}-archive
           path: lib/@turbot/cli/dist/turbot_cli_*_${{ matrix.archive }}.zip
@@ -135,7 +138,7 @@ jobs:
 
       - name: Upload build info
         if: matrix.platform == 'linux-x64'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: build-info
           path: lib/@turbot/cli/dist/commit.txt
@@ -163,7 +166,7 @@ jobs:
 
     steps:
       - name: Download binary artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: turbot-cli-${{ matrix.platform }}-binary
           path: .
@@ -194,10 +197,10 @@ jobs:
       contents: write
     steps:
       - name: Checkout guardrails-cli repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: artifacts
 
@@ -229,7 +232,7 @@ jobs:
           cat checksums.txt
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
           tag_name: v${{ github.event.inputs.releaseVersion }}
           name: v${{ github.event.inputs.releaseVersion }}
