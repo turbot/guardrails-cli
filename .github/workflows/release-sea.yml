@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       releaseVersion:
-        description: "The version number of the new release, without v (e.g., 1.32.0)"
+        description: "The version number of the new release (e.g., 1.32.0 or v1.32.0; leading v is stripped)"
         required: true
         default: "1.32.0-rc.1"
       turbotCoreBranch:
@@ -28,8 +28,27 @@ env:
   NODE_VERSION: "24"
 
 jobs:
+  prepare:
+    name: Prepare release inputs
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.normalize.outputs.version }}
+    steps:
+      - name: Normalize and validate version
+        id: normalize
+        run: |
+          RAW="${{ github.event.inputs.releaseVersion }}"
+          VERSION="${RAW#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "ERROR: '$RAW' is not a valid semver (expected e.g. 1.32.0 or 1.32.0-rc.1)"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Normalized version: $VERSION (input: $RAW)"
+
   build:
     name: Build ${{ matrix.platform }} Binary
+    needs: prepare
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -100,7 +119,7 @@ jobs:
         shell: bash
         run: |
           cd lib/@turbot/cli
-          ./compile-sea.sh ${{ matrix.platform }} --version ${{ github.event.inputs.releaseVersion }}
+          ./compile-sea.sh ${{ matrix.platform }} --version ${{ needs.prepare.outputs.version }}
 
       - name: Verify binary was created
         shell: bash
@@ -191,7 +210,7 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    needs: [build, test-binaries]
+    needs: [prepare, build, test-binaries]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -234,10 +253,10 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
-          tag_name: v${{ github.event.inputs.releaseVersion }}
-          name: v${{ github.event.inputs.releaseVersion }}
+          tag_name: v${{ needs.prepare.outputs.version }}
+          name: v${{ needs.prepare.outputs.version }}
           body: |
-            ## Turbot Guardrails CLI v${{ github.event.inputs.releaseVersion }}
+            ## Turbot Guardrails CLI v${{ needs.prepare.outputs.version }}
 
             ### Installation
 
@@ -255,10 +274,10 @@ jobs:
 
             | Platform | Architecture | Download |
             |----------|--------------|----------|
-            | macOS | Apple Silicon (arm64) | [`turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_arm64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_arm64.zip) |
-            | macOS | Intel (x64) | [`turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_amd64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_darwin_amd64.zip) |
-            | Linux | x64 | [`turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_linux_amd64.zip) |
-            | Windows | x64 | [`turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ github.event.inputs.releaseVersion }}/turbot_cli_${{ github.event.inputs.releaseVersion }}_windows_amd64.zip) |
+            | macOS | Apple Silicon (arm64) | [`turbot_cli_${{ needs.prepare.outputs.version }}_darwin_arm64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ needs.prepare.outputs.version }}/turbot_cli_${{ needs.prepare.outputs.version }}_darwin_arm64.zip) |
+            | macOS | Intel (x64) | [`turbot_cli_${{ needs.prepare.outputs.version }}_darwin_amd64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ needs.prepare.outputs.version }}/turbot_cli_${{ needs.prepare.outputs.version }}_darwin_amd64.zip) |
+            | Linux | x64 | [`turbot_cli_${{ needs.prepare.outputs.version }}_linux_amd64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ needs.prepare.outputs.version }}/turbot_cli_${{ needs.prepare.outputs.version }}_linux_amd64.zip) |
+            | Windows | x64 | [`turbot_cli_${{ needs.prepare.outputs.version }}_windows_amd64.zip`](https://github.com/turbot/guardrails-cli/releases/download/v${{ needs.prepare.outputs.version }}/turbot_cli_${{ needs.prepare.outputs.version }}_windows_amd64.zip) |
 
             **macOS Quarantine:** If you see a security warning, remove the quarantine attribute:
             ```bash
@@ -298,14 +317,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release edit "v${{ github.event.inputs.releaseVersion }}" \
+          gh release edit "v${{ needs.prepare.outputs.version }}" \
             --repo ${{ github.repository }} \
             --draft=false \
             --prerelease=${{ github.event.inputs.prerelease }}
 
   summary:
     name: Build Summary
-    needs: [build, create-release]
+    needs: [prepare, build, create-release]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -314,7 +333,7 @@ jobs:
           echo "## CLI Build Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Build Configuration" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release Version**: v${{ github.event.inputs.releaseVersion }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Version**: v${{ needs.prepare.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **turbot-core Branch**: \`${{ github.event.inputs.turbotCoreBranch }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Node.js Version**: ${{ env.NODE_VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Build Method**: Node.js SEA (Single Executable Applications)" >> $GITHUB_STEP_SUMMARY
@@ -328,4 +347,4 @@ jobs:
           echo "| macOS | arm64 (Apple Silicon) | OK |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Release" >> $GITHUB_STEP_SUMMARY
-          echo "[View Release](https://github.com/turbot/guardrails-cli/releases/tag/v${{ github.event.inputs.releaseVersion }})" >> $GITHUB_STEP_SUMMARY
+          echo "[View Release](https://github.com/turbot/guardrails-cli/releases/tag/v${{ needs.prepare.outputs.version }})" >> $GITHUB_STEP_SUMMARY
