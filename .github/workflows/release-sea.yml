@@ -289,10 +289,19 @@ jobs:
           files: |
             release/*.zip
             release/checksums.txt
-          draft: false
+          draft: true
           prerelease: ${{ github.event.inputs.prerelease == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "v${{ github.event.inputs.releaseVersion }}" \
+            --repo ${{ github.repository }} \
+            --draft=false \
+            --prerelease=${{ github.event.inputs.prerelease }}
 
   summary:
     name: Build Summary
