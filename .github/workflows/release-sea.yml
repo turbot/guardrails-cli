@@ -322,6 +322,73 @@ jobs:
             --draft=false \
             --prerelease=${{ github.event.inputs.prerelease }}
 
+  update_homebrew_tap:
+    name: Update homebrew-tap formula
+    needs: [prepare, create-release]
+    # Prereleases (rc/alpha/beta) publish a GitHub release but must never touch
+    # the tap — `brew install turbot/tap/guardrails-cli` has to stay on the last
+    # stable version. Only full releases update and promote the formula.
+    if: github.event.inputs.prerelease != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - name: Checkout guardrails-cli (formula generator script)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          path: guardrails-cli
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: turbot/homebrew-tap
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
+          path: homebrew-tap
+
+      - name: Download release checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "v${VERSION}" \
+            --repo ${{ github.repository }} \
+            --pattern checksums.txt \
+            --dir .
+
+      - name: Generate versioned formula
+        run: |
+          chmod +x guardrails-cli/scripts/generate-homebrew-formula.sh
+          guardrails-cli/scripts/generate-homebrew-formula.sh \
+            "${VERSION}" \
+            checksums.txt \
+            "homebrew-tap/Formula/guardrails-cli@${VERSION}.rb"
+
+      - name: Promote to base formula
+        working-directory: homebrew-tap
+        run: |
+          chmod +x scripts/formula_versioning_guardrails.sh
+          scripts/formula_versioning_guardrails.sh
+
+      - name: Open and merge pull request
+        working-directory: homebrew-tap
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+        run: |
+          BRANCH="guardrails-cli-v${VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add "Formula/guardrails-cli.rb" "Formula/guardrails-cli@${VERSION}.rb"
+          git commit -m "Guardrails CLI ${VERSION}"
+          git push --force-with-lease --set-upstream origin "$BRANCH"
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Guardrails CLI ${VERSION}" \
+            --body "Automated Homebrew formula update for guardrails-cli v${VERSION}."
+          gh pr merge "$BRANCH" --squash --delete-branch
+
   summary:
     name: Build Summary
     needs: [prepare, build, create-release]
